@@ -1,0 +1,23 @@
+# Keep the image small & secret-free
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Secrets — injected at runtime as env vars, never copied into the image
+.env
+.streamlit/secrets.toml
+
+# Local data & logs (rebuilt at runtime)
+data/
+*.log
+.streamlit_run.log
+
+# Dev / VCS cruft
+.git/
+.gitignore
+.idea/
+.vscode/
+.DS_Store
+*.md

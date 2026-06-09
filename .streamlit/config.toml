@@ -1,0 +1,10 @@
+# Pin Streamlit's base theme to LIGHT so native widgets (expanders, selectboxes,
+# popovers, dropdowns) render light to match the app's custom light UI — instead
+# of defaulting to a dark base and showing up as dark-on-dark boxes.
+[theme]
+base = "light"
+primaryColor = "#6366f1"
+backgroundColor = "#f1f5f9"
+secondaryBackgroundColor = "#ffffff"
+textColor = "#0f172a"
+font = "sans serif"

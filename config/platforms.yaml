@@ -1,0 +1,939 @@
+categories:
+  flight:
+    display_name: Flights
+    icon: ✈️
+    required_params:
+    - origin
+    - destination
+    - date
+    optional_params:
+    - return_date
+    - passengers
+    - cabin_class
+    - budget
+    result_fields:
+    - price
+    - airline
+    - cabin_class
+    - duration
+    - stops
+    - departure_time
+    - arrival_time
+    - url
+    comparison_dimensions:
+    - key: price
+      label: Price
+      type: price
+      better: lower
+    - key: cabin_class
+      label: Class
+      type: text
+      better: none
+    - key: stops
+      label: Stops
+      type: number
+      better: lower
+    - key: duration
+      label: Duration
+      type: duration
+      better: lower
+    - key: airline
+      label: Airline
+      type: text
+      better: none
+    - key: baggage
+      label: Baggage
+      type: text
+      better: more
+    - key: refundable
+      label: Refundable
+      type: bool
+      better: 'true'
+    - key: meal
+      label: Meal
+      type: bool
+      better: 'true'
+    - key: departure_time
+      label: Departure
+      type: text
+      better: none
+  hotel:
+    display_name: Hotels
+    icon: 🏨
+    required_params:
+    - location
+    - check_in
+    - check_out
+    optional_params:
+    - guests
+    - rooms
+    - budget
+    - rating
+    result_fields:
+    - name
+    - price_per_night
+    - total_price
+    - rating
+    - location
+    - amenities
+    - room_type
+    - url
+    comparison_dimensions:
+    - key: price_per_night
+      label: Price/night
+      type: price
+      better: lower
+    - key: rating
+      label: Rating
+      type: rating
+      better: higher
+    - key: free_cancellation
+      label: Free Cancellation
+      type: bool
+      better: 'true'
+    - key: breakfast
+      label: Breakfast
+      type: bool
+      better: 'true'
+    - key: wifi
+      label: WiFi
+      type: bool
+      better: 'true'
+    - key: pool
+      label: Pool
+      type: bool
+      better: 'true'
+    - key: parking
+      label: Parking
+      type: bool
+      better: 'true'
+    - key: location
+      label: Location
+      type: text
+      better: none
+  event:
+    display_name: Events & Shows
+    icon: 🎭
+    required_params:
+    - location
+    optional_params:
+    - date
+    - event_type
+    - budget
+    result_fields:
+    - name
+    - date
+    - venue
+    - price
+    - category
+    - availability
+    - url
+    comparison_dimensions:
+    - key: price
+      label: Price
+      type: price
+      better: lower
+    - key: venue
+      label: Venue
+      type: text
+      better: none
+    - key: date
+      label: Date
+      type: text
+      better: none
+    - key: category
+      label: Category
+      type: text
+      better: none
+    - key: availability
+      label: Availability
+      type: text
+      better: none
+  restaurant:
+    display_name: Restaurants & Food
+    icon: 🍽️
+    required_params:
+    - location
+    optional_params:
+    - cuisine
+    - budget
+    - rating
+    - delivery
+    result_fields:
+    - name
+    - cuisine
+    - rating
+    - price_range
+    - delivery_time
+    - url
+    comparison_dimensions:
+    - key: rating
+      label: Rating
+      type: rating
+      better: higher
+    - key: price_range
+      label: Price
+      type: price
+      better: lower
+    - key: cuisine
+      label: Cuisine
+      type: text
+      better: none
+    - key: delivery_time
+      label: Delivery
+      type: duration
+      better: lower
+    - key: offers
+      label: Offers
+      type: text
+      better: more
+    - key: veg
+      label: Pure Veg
+      type: bool
+      better: none
+  product:
+    display_name: Products & Shopping
+    icon: 🛒
+    required_params:
+    - product_name
+    optional_params:
+    - budget
+    - brand
+    - condition
+    result_fields:
+    - name
+    - price
+    - seller
+    - rating
+    - delivery
+    - condition
+    - variant
+    - url
+    comparison_dimensions:
+    - key: price
+      label: Price
+      type: price
+      better: lower
+    - key: rating
+      label: Rating
+      type: rating
+      better: higher
+    - key: delivery
+      label: Delivery
+      type: text
+      better: lower
+    - key: seller
+      label: Seller
+      type: text
+      better: none
+    - key: warranty
+      label: Warranty
+      type: text
+      better: more
+    - key: emi
+      label: EMI
+      type: bool
+      better: 'true'
+    - key: offers
+      label: Offers
+      type: text
+      better: more
+  train:
+    display_name: Trains
+    icon: 🚂
+    required_params:
+    - origin
+    - destination
+    - date
+    optional_params:
+    - class
+    - quota
+    - passengers
+    result_fields:
+    - train_name
+    - number
+    - departure
+    - arrival
+    - duration
+    - price
+    - availability
+    - class
+    - url
+    comparison_dimensions:
+    - key: price
+      label: Fare
+      type: price
+      better: lower
+    - key: duration
+      label: Duration
+      type: duration
+      better: lower
+    - key: availability
+      label: Availability
+      type: text
+      better: more
+    - key: departure
+      label: Departure
+      type: text
+      better: none
+    - key: class
+      label: Class
+      type: text
+      better: none
+    - key: confirmation_chance
+      label: Confirm %
+      type: rating
+      better: higher
+  bus:
+    display_name: Bus
+    icon: 🚌
+    required_params:
+    - origin
+    - destination
+    - date
+    optional_params:
+    - bus_type
+    - passengers
+    result_fields:
+    - operator
+    - departure
+    - arrival
+    - duration
+    - price
+    - rating
+    - bus_type
+    - url
+    comparison_dimensions:
+    - key: price
+      label: Fare
+      type: price
+      better: lower
+    - key: duration
+      label: Duration
+      type: duration
+      better: lower
+    - key: rating
+      label: Rating
+      type: rating
+      better: higher
+    - key: bus_type
+      label: Type
+      type: text
+      better: none
+    - key: departure
+      label: Departure
+      type: text
+      better: none
+    - key: amenities
+      label: Amenities
+      type: text
+      better: more
+  car_rental:
+    display_name: Car Rental
+    icon: 🚗
+    required_params:
+    - location
+    - pickup_date
+    - return_date
+    optional_params:
+    - car_type
+    - budget
+    result_fields:
+    - car_model
+    - category
+    - price_per_day
+    - total_price
+    - provider
+    - url
+    comparison_dimensions:
+    - key: price_per_day
+      label: Price/day
+      type: price
+      better: lower
+    - key: car_model
+      label: Car
+      type: text
+      better: none
+    - key: category
+      label: Category
+      type: text
+      better: none
+    - key: fuel
+      label: Fuel
+      type: text
+      better: none
+    - key: transmission
+      label: Transmission
+      type: text
+      better: none
+    - key: free_cancellation
+      label: Free Cancel
+      type: bool
+      better: 'true'
+platforms:
+- id: google_flights
+  name: Google Flights
+  categories:
+  - flight
+  icon: 🔵
+  strategy: ddg
+  ddg_template: google flights {origin} to {destination} {date} cheapest price
+  result_fields:
+  - price
+  - airline
+  - cabin_class
+  - duration
+  - stops
+  - departure_time
+  - arrival_time
+  - url
+  website: https://www.google.com/flights
+  keywords:
+  - google flights
+  search_url_template: https://www.google.com/travel/flights?q=flights+from+{origin}+to+{destination}+on+{date}
+- id: skyscanner
+  name: Skyscanner
+  categories:
+  - flight
+  icon: 🟠
+  strategy: ddg
+  ddg_template: skyscanner {origin} {destination} {date} flights price comparison
+  result_fields:
+  - price
+  - airline
+  - cabin_class
+  - duration
+  - stops
+  - url
+  website: https://www.skyscanner.com
+  keywords:
+  - skyscanner
+  search_url_template: https://www.skyscanner.com/transport/flights/{origin}/{destination}/{date}/
+- id: makemytrip_flights
+  name: MakeMyTrip Flights
+  categories:
+  - flight
+  icon: 🟡
+  strategy: ddg
+  ddg_template: makemytrip flights {origin} to {destination} {date} book ticket price
+  result_fields:
+  - price
+  - airline
+  - cabin_class
+  - duration
+  - stops
+  - departure_time
+  - url
+  website: https://www.makemytrip.com/flights
+  keywords:
+  - makemytrip
+  - mmt
+  search_url_template: https://www.makemytrip.com/flights/domestic/results?itinerary={origin}-{destination}-{date}&tripType=O&paxType=A-1_C-0_I-0&intl=false
+- id: goibibo_flights
+  name: Goibibo Flights
+  categories:
+  - flight
+  icon: 🟢
+  strategy: ddg
+  ddg_template: goibibo flights {origin} {destination} {date} cheapest
+  result_fields:
+  - price
+  - airline
+  - cabin_class
+  - duration
+  - departure_time
+  - url
+  website: https://www.goibibo.com/flights
+  keywords:
+  - goibibo
+  search_url_template: https://www.goibibo.com/flights/search/?source={origin}&destination={destination}&dateofdeparture={date}&adults=1&children=0&infants=0&class=ECONOMY&seatingclass=E&travelType=D
+- id: cleartrip_flights
+  name: Cleartrip
+  categories:
+  - flight
+  icon: 🔴
+  strategy: ddg
+  ddg_template: cleartrip flights {origin} to {destination} {date} lowest fare
+  result_fields:
+  - price
+  - airline
+  - cabin_class
+  - duration
+  - stops
+  - url
+  website: https://www.cleartrip.com/flights
+  keywords:
+  - cleartrip
+  search_url_template: https://www.cleartrip.com/flights/results?adults=1&childs=0&infants=0&class=Economy&depart_date={date}&from={origin}&to={destination}&airline=&intl=n
+- id: booking_com
+  name: Booking.com
+  categories:
+  - hotel
+  icon: 🔵
+  strategy: ddg
+  ddg_template: booking.com hotels {location} {check_in} to {check_out} price per
+    night
+  result_fields:
+  - name
+  - price_per_night
+  - rating
+  - room_type
+  - location
+  - url
+  website: https://www.booking.com
+  keywords:
+  - booking.com
+  - booking
+  search_url_template: https://www.booking.com/searchresults.html?ss={location}&checkin={check_in}&checkout={check_out}&selected_currency=INR&lang=en-gb
+- id: agoda
+  name: Agoda
+  categories:
+  - hotel
+  icon: 🟠
+  strategy: ddg
+  ddg_template: agoda hotels {location} {check_in} lowest price
+  result_fields:
+  - name
+  - price_per_night
+  - rating
+  - room_type
+  - amenities
+  - url
+  website: https://www.agoda.com
+  keywords:
+  - agoda
+  search_url_template: https://www.agoda.com/search?city={location}&checkIn={check_in}&checkOut={check_out}&los=2&adults=2&cid=0
+- id: makemytrip_hotels
+  name: MakeMyTrip Hotels
+  categories:
+  - hotel
+  icon: 🟡
+  strategy: ddg
+  ddg_template: makemytrip hotels {location} {check_in} {check_out} cheap
+  result_fields:
+  - name
+  - price_per_night
+  - rating
+  - room_type
+  - location
+  - url
+  website: https://www.makemytrip.com/hotels
+  keywords:
+  - makemytrip hotels
+  search_url_template: https://www.makemytrip.com/hotels/hotel-listing/?hotelCity={location}&checkin={check_in}&checkout={check_out}
+- id: oyo
+  name: OYO Rooms
+  categories:
+  - hotel
+  icon: 🔴
+  strategy: ddg
+  ddg_template: OYO rooms {location} {check_in} price per night budget hotel
+  result_fields:
+  - name
+  - price_per_night
+  - rating
+  - room_type
+  - location
+  - url
+  website: https://www.oyorooms.com
+  keywords:
+  - oyo
+  - oyo rooms
+  search_url_template: https://www.oyorooms.com/search/?location={location}&checkinDate={check_in}&checkoutDate={check_out}
+- id: airbnb
+  name: Airbnb
+  categories:
+  - hotel
+  icon: 🌸
+  strategy: ddg
+  ddg_template: airbnb {location} {check_in} to {check_out} price entire place
+  result_fields:
+  - name
+  - price_per_night
+  - rating
+  - type
+  - location
+  - url
+  website: https://www.airbnb.in
+  keywords:
+  - airbnb
+  search_url_template: https://www.airbnb.in/s/{location}/homes?checkin={check_in}&checkout={check_out}&adults=2
+- id: bookmyshow
+  name: BookMyShow
+  categories:
+  - event
+  icon: 🎬
+  strategy: ddg
+  ddg_template: bookmyshow {location} {event_type} {date} tickets price
+  result_fields:
+  - name
+  - date
+  - venue
+  - price
+  - category
+  - url
+  website: https://in.bookmyshow.com
+  keywords:
+  - bookmyshow
+  - bms
+  search_url_template: https://in.bookmyshow.com/explore/movies-{location}
+- id: insider_in
+  name: Insider.in
+  categories:
+  - event
+  icon: 🎵
+  strategy: ddg
+  ddg_template: insider.in events {location} {date} tickets
+  result_fields:
+  - name
+  - date
+  - venue
+  - price
+  - category
+  - url
+  website: https://insider.in
+  keywords:
+  - insider
+  - insider.in
+  search_url_template: https://insider.in/events/{location}
+- id: paytm_events
+  name: Paytm Events
+  categories:
+  - event
+  icon: 💙
+  strategy: ddg
+  ddg_template: paytm events {location} {date} show tickets book
+  result_fields:
+  - name
+  - date
+  - venue
+  - price
+  - url
+  website: https://paytm.com/events
+  keywords:
+  - paytm events
+  search_url_template: https://paytm.com/events/{location}
+- id: ticketmaster
+  name: Ticketmaster
+  categories:
+  - event
+  icon: 🎫
+  strategy: ddg
+  ddg_template: ticketmaster {location} {event_type} {date} tickets price
+  result_fields:
+  - name
+  - date
+  - venue
+  - price
+  - category
+  - url
+  website: https://www.ticketmaster.com
+  keywords:
+  - ticketmaster
+  search_url_template: https://www.ticketmaster.com/search?q={location}+{event_type}
+- id: zomato
+  name: Zomato
+  categories:
+  - restaurant
+  icon: 🔴
+  strategy: ddg
+  ddg_template: zomato {cuisine} restaurants {location} top rated delivery
+  result_fields:
+  - name
+  - cuisine
+  - rating
+  - price_range
+  - delivery_time
+  - url
+  website: https://www.zomato.com
+  keywords:
+  - zomato
+  search_url_template: https://www.zomato.com/{location}/restaurants
+- id: swiggy
+  name: Swiggy
+  categories:
+  - restaurant
+  icon: 🟠
+  strategy: ddg
+  ddg_template: swiggy {cuisine} food delivery {location} top restaurants
+  result_fields:
+  - name
+  - cuisine
+  - rating
+  - price_range
+  - delivery_time
+  - url
+  website: https://www.swiggy.com
+  keywords:
+  - swiggy
+  search_url_template: https://www.swiggy.com/search?query={cuisine}
+- id: google_maps_restaurants
+  name: Google Maps
+  categories:
+  - restaurant
+  icon: 🔵
+  strategy: ddg
+  ddg_template: best {cuisine} restaurants near {location} google maps rating price
+  result_fields:
+  - name
+  - cuisine
+  - rating
+  - price_range
+  - address
+  - url
+  website: https://www.google.com/maps
+  keywords:
+  - google maps
+  search_url_template: https://www.google.com/maps/search/{cuisine}+restaurants+in+{location}
+- id: dineout
+  name: Dineout
+  categories:
+  - restaurant
+  icon: 🍴
+  strategy: ddg
+  ddg_template: dineout {cuisine} restaurants {location} offers booking
+  result_fields:
+  - name
+  - cuisine
+  - rating
+  - price_range
+  - offers
+  - url
+  website: https://www.dineout.co.in
+  keywords:
+  - dineout
+  search_url_template: https://www.dineout.co.in/{location}/restaurants
+- id: amazon
+  name: Amazon
+  categories:
+  - product
+  icon: 📦
+  strategy: ddg
+  ddg_template: amazon {product_name} {brand} price buy
+  result_fields:
+  - name
+  - price
+  - seller
+  - rating
+  - delivery
+  - condition
+  - variant
+  - prime
+  - url
+  website: https://www.amazon.in
+  keywords:
+  - amazon
+  search_url_template: https://www.amazon.in/s?k={product_name}
+- id: flipkart
+  name: Flipkart
+  categories:
+  - product
+  icon: 🛒
+  strategy: ddg
+  ddg_template: flipkart {product_name} {brand} price offers
+  result_fields:
+  - name
+  - price
+  - seller
+  - rating
+  - delivery
+  - condition
+  - variant
+  - offers
+  - url
+  website: https://www.flipkart.com
+  keywords:
+  - flipkart
+  search_url_template: https://www.flipkart.com/search?q={product_name}
+- id: meesho
+  name: Meesho
+  categories:
+  - product
+  icon: 🛍️
+  strategy: ddg
+  ddg_template: meesho {product_name} lowest price
+  result_fields:
+  - name
+  - price
+  - seller
+  - rating
+  - condition
+  - variant
+  - url
+  website: https://www.meesho.com
+  keywords:
+  - meesho
+  search_url_template: https://www.meesho.com/search?q={product_name}
+- id: croma
+  name: Croma
+  categories:
+  - product
+  icon: 💚
+  strategy: ddg
+  ddg_template: croma {product_name} price specification
+  result_fields:
+  - name
+  - price
+  - specs
+  - condition
+  - variant
+  - rating
+  - emi
+  - url
+  website: https://www.croma.com
+  keywords:
+  - croma
+  search_url_template: https://www.croma.com/searchB?q={product_name}
+- id: irctc
+  name: IRCTC
+  categories:
+  - train
+  icon: 🚂
+  strategy: ddg
+  ddg_template: IRCTC trains {origin} to {destination} {date} seat availability fare
+  result_fields:
+  - train_name
+  - number
+  - departure
+  - arrival
+  - duration
+  - price
+  - class
+  - availability
+  - url
+  website: https://www.irctc.co.in
+  keywords:
+  - irctc
+  - indian railways
+  search_url_template: https://www.irctc.co.in/nget/train-search
+- id: ixigo_trains
+  name: ixigo Trains
+  categories:
+  - train
+  icon: 🟢
+  strategy: ddg
+  ddg_template: ixigo trains {origin} to {destination} {date} running status fare
+  result_fields:
+  - train_name
+  - number
+  - departure
+  - arrival
+  - duration
+  - price
+  - class
+  - url
+  website: https://www.ixigo.com/trains
+  keywords:
+  - ixigo
+  search_url_template: https://www.ixigo.com/trains/{origin}/{destination}/{date}
+- id: confirmtkt
+  name: ConfirmTkt
+  categories:
+  - train
+  icon: 🎫
+  strategy: ddg
+  ddg_template: confirmtkt {origin} {destination} {date} train ticket prediction
+  result_fields:
+  - train_name
+  - price
+  - class
+  - confirmation_chance
+  - availability
+  - url
+  website: https://www.confirmtkt.com
+  keywords:
+  - confirmtkt
+  search_url_template: https://www.confirmtkt.com/train-between-stations?from={origin}&to={destination}&date={date}
+- id: redbus
+  name: redBus
+  categories:
+  - bus
+  icon: 🔴
+  strategy: ddg
+  ddg_template: redbus {origin} to {destination} {date} bus ticket price
+  result_fields:
+  - operator
+  - departure
+  - arrival
+  - duration
+  - price
+  - rating
+  - bus_type
+  - url
+  website: https://www.redbus.in
+  keywords:
+  - redbus
+  - red bus
+  search_url_template: https://www.redbus.in/bus-tickets/{origin}-to-{destination}?onward={date}
+- id: abhibus
+  name: AbhiBus
+  categories:
+  - bus
+  icon: 🟡
+  strategy: ddg
+  ddg_template: abhibus {origin} {destination} {date} bus fare seat
+  result_fields:
+  - operator
+  - departure
+  - duration
+  - price
+  - bus_type
+  - url
+  website: https://www.abhibus.com
+  keywords:
+  - abhibus
+  search_url_template: https://www.abhibus.com/busbooking/{origin}-To-{destination}/{date}/S
+- id: makemytrip_bus
+  name: MakeMyTrip Bus
+  categories:
+  - bus
+  icon: 🟢
+  strategy: ddg
+  ddg_template: makemytrip bus {origin} to {destination} {date} sleeper price
+  result_fields:
+  - operator
+  - departure
+  - duration
+  - price
+  - bus_type
+  - url
+  website: https://www.makemytrip.com/bus-tickets
+  keywords:
+  - makemytrip bus
+  search_url_template: https://www.makemytrip.com/bus-tickets/{origin}-{destination}/
+- id: zoomcar
+  name: Zoomcar
+  categories:
+  - car_rental
+  icon: 🚗
+  website: https://www.zoomcar.com
+  strategy: ddg
+  ddg_template: zoomcar {location} {pickup_date} self drive car rental price
+  result_fields:
+  - car_model
+  - category
+  - price_per_day
+  - total_price
+  - url
+  keywords:
+  - zoomcar
+  - zoom car
+  search_url_template: https://www.zoomcar.com/{location}/car-rental
+- id: myles
+  name: Myles Cars
+  categories:
+  - car_rental
+  icon: 🔵
+  website: https://www.mylescars.com
+  strategy: ddg
+  ddg_template: myles cars {location} self drive rental {pickup_date} price
+  result_fields:
+  - car_model
+  - category
+  - price_per_day
+  - total_price
+  - url
+  keywords:
+  - myles
+  - myles cars
+  search_url_template: https://www.mylescars.com/cars/{location}

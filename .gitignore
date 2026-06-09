@@ -1,0 +1,22 @@
+# ── Secrets & credentials — never commit ──
+.env
+.streamlit/secrets.toml
+
+# ── Local data (sqlite, chroma, logs) ──
+data/*.db
+data/chroma/
+.streamlit_run.log
+*.log
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ── OS / editor ──
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

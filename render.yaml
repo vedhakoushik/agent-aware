@@ -1,0 +1,55 @@
+# Render.com blueprint — deploys Agent-Aware as a Docker web service.
+# In Render: New → Blueprint → connect this repo. Render reads this file,
+# then prompts you to fill in the secret values marked `sync: false`.
+services:
+  - type: web
+    name: agent-aware
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Free tier has 512MB RAM, which is tight for Playwright + the embedding
+    # model — "starter" (or larger) is recommended for reliable searches.
+    plan: starter
+    healthCheckPath: /_stcore/health
+    autoDeploy: true
+    envVars:
+      # ── Required: core search ──
+      - key: GROQ_API_KEY
+        sync: false          # paste in Render dashboard
+      - key: TAVILY_API_KEY
+        sync: false
+      # ── Optional: official data API (RapidAPI) ──
+      - key: RAPIDAPI_KEY
+        sync: false
+      - key: RAPIDAPI_HOST
+        sync: false
+      # ── Optional: Slack channel viewer (read-only) ──
+      - key: SLACK_BOT_TOKEN
+        sync: false
+      # ── Optional: Langfuse LLM tracing ──
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_HOST
+        value: https://cloud.langfuse.com
+      # ── browser-use agent scraper ──
+      - key: BROWSER_USE_ENABLED
+        value: "true"
+      - key: BROWSER_USE_MAX_STEPS
+        value: "6"
+      - key: BROWSER_USE_MODEL
+        value: meta-llama/llama-4-scout-17b-16e-instruct
+      # ── Google sign-in gate (leave blank for open mode) ──
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: COOKIE_SECRET
+        generateValue: true  # Render generates a strong random value
+      - key: APP_URL
+        sync: false          # set to your Render URL, e.g. https://agent-aware.onrender.com
+      - key: ALLOWED_EMAILS
+        sync: false          # optional CSV allowlist; blank = any Google account
+      # ── Server behavior ──
+      - key: PLAYWRIGHT_HEADLESS
+        value: "true"

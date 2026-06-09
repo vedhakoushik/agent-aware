@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "agent-aware",
+      "runtimeExecutable": "C:/Users/bella/agent-aware/.venv/Scripts/python.exe",
+      "runtimeArgs": ["run.py"],
+      "port": 8501,
+      "cwd": "C:/Users/bella/agent-aware"
+    }
+  ]
+}
