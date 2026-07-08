@@ -709,6 +709,7 @@ platforms:
   - product
   icon: 📦
   strategy: ddg
+  fast_scrape: true   # server-rendered results — deterministic deep-link scrape works
   ddg_template: amazon {product_name} {brand} price buy
   result_fields:
   - name
@@ -730,6 +731,7 @@ platforms:
   - product
   icon: 🛒
   strategy: ddg
+  fast_scrape: true   # server-rendered results — deterministic deep-link scrape works (~6s)
   ddg_template: flipkart {product_name} {brand} price offers
   result_fields:
   - name
@@ -745,25 +747,6 @@ platforms:
   keywords:
   - flipkart
   search_url_template: https://www.flipkart.com/search?q={product_name}
-- id: meesho
-  name: Meesho
-  categories:
-  - product
-  icon: 🛍️
-  strategy: ddg
-  ddg_template: meesho {product_name} lowest price
-  result_fields:
-  - name
-  - price
-  - seller
-  - rating
-  - condition
-  - variant
-  - url
-  website: https://www.meesho.com
-  keywords:
-  - meesho
-  search_url_template: https://www.meesho.com/search?q={product_name}
 - id: croma
   name: Croma
   categories:

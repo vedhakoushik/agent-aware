@@ -2,7 +2,7 @@ import json
 import logging
 import os
 
-from backend.llm import get_chat_client
+from backend.llm import chat
 from backend.state import AgentState, Recommendation
 from backend.memory.store import get_price_context
 from backend.progress import emit
@@ -55,12 +55,11 @@ def recommend_node(state: AgentState) -> dict:
         for p in ranked[:3]
     ]
 
-    client = get_chat_client()
     emit("Picking the best option…", stage="recommend", kind="start")
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        response = chat(
+            "recommend",
             messages=[
                 {
                     "role": "system",

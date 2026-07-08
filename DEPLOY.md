@@ -55,6 +55,7 @@ You already created the Google Cloud project. Now:
    | Variable | Value |
    |---|---|
    | `GROQ_API_KEY` | your Groq key |
+   | `GEMINI_API_KEY` | (optional) Gemini key — splits LLM load with Groq + auto-failover |
    | `TAVILY_API_KEY` | your Tavily key |
    | `RAPIDAPI_KEY` / `RAPIDAPI_HOST` | (optional) your RapidAPI key + host |
    | `GOOGLE_CLIENT_ID` | from Step 1 |

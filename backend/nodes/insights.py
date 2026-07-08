@@ -14,7 +14,7 @@ import logging
 import os
 import re
 
-from backend.llm import get_chat_client
+from backend.llm import chat
 from backend.state import AgentState
 from backend.progress import emit
 from backend.dimensions import discover_dimensions
@@ -235,7 +235,6 @@ Return JSON: {{"takeaways": ["...", "..."], "verdict": "<one-line bottom-line re
 
 def _ai_takeaways(query: str, intent_type: str, platform_summaries: list[dict],
                   matrix_data: dict, value_scores: dict, badges: dict) -> dict:
-    client = get_chat_client()
     compact = {
         "platforms": [
             {
@@ -251,8 +250,8 @@ def _ai_takeaways(query: str, intent_type: str, platform_summaries: list[dict],
         "dimension_winners": matrix_data["dimension_winners"],
     }
     try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        resp = chat(
+            "insights",
             messages=[{"role": "user", "content": TAKEAWAY_PROMPT.format(
                 query=query, intent_type=intent_type,
                 comparison_json=json.dumps(compact, indent=2)[:3000],
@@ -292,7 +291,12 @@ def insights_node(state: AgentState) -> dict:
     # (surfacing real attributes the listings expose, dropping ones nothing
     # mentions). Static YAML dims are a fallback for thin/edge result sets.
     best_results = [s["best_result"] for s in summaries if s.get("best_result")]
-    dims = discover_dimensions(best_results, intent_type)
+    # A factor only earns a row if at least 2 platforms expose it — a value only one
+    # site has isn't comparable and just litters the matrix with near-empty rows.
+    # With only 1-2 platforms there's nothing to cross-check, so allow single coverage
+    # there (otherwise the matrix would collapse to just Price). Price always shows.
+    min_cov = 2 if len(best_results) >= 3 else 1
+    dims = discover_dimensions(best_results, intent_type, max_dims=10, min_coverage=min_cov)
     if len(dims) < 2:
         static = _load_dimensions(intent_type)
         # Merge: keep discovered, append any static factors not already present.

@@ -75,6 +75,24 @@ class ProgressTracker:
 
 _tracker = ProgressTracker()
 
+# ── Cancellation ───────────────────────────────────────────────
+# Set by the UI's "New search (clear & stop)" button; checked by the search loop and
+# the live polling loop so an in-flight / lingering run aborts instead of holding
+# resources. Cleared at the start of every new run.
+_cancel = threading.Event()
+
+
+def request_cancel() -> None:
+    _cancel.set()
+
+
+def clear_cancel() -> None:
+    _cancel.clear()
+
+
+def is_cancelled() -> bool:
+    return _cancel.is_set()
+
 
 def get_tracker() -> ProgressTracker:
     return _tracker

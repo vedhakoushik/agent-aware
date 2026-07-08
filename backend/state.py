@@ -23,6 +23,8 @@ class PlatformResult(TypedDict):
     raw_snippets: list         # raw search text before LLM parsing
     error: Optional[str]
     elapsed_seconds: float
+    tier: str                  # which search tier produced the kept results (tavily/browser-use/google/ddg)
+    roadblock: Optional[dict]  # {reason, suggestion} when this platform came back empty — drives the "needs help" UI
 
 
 class ComparisonEntry(TypedDict):
@@ -46,6 +48,26 @@ class Recommendation(TypedDict):
     confidence: str            # high, medium, low
 
 
+class ValidationCheck(TypedDict):
+    name: str                  # groundedness, budget, best_price, coverage, coherence…
+    passed: bool
+    severity: str              # info | warn | critical
+    detail: str                # human-readable explanation
+    proof: Optional[dict]      # the real evidence (counts, price ranges, the offending value)
+
+
+class ValidationReport(TypedDict):
+    round: int                 # remediation round that produced this report (0 = first pass)
+    verdict: str               # valid | fixed | best_effort | issues_remain
+    checks: list               # list[ValidationCheck]
+    issues: list               # the subset of checks that failed
+    fixed: bool                # did the validator correct the recommendation this round?
+    fix_details: Optional[dict]  # {what, before, after, why} for the recommendation-level fix
+    constraint_notes: list     # honest "couldn't fully satisfy X — here's the proof + best available" notes
+    remediation_plan: list     # [{action, target, reason}] actions handed to the remediation node
+    elapsed_seconds: float
+
+
 class AgentState(TypedDict):
     query: str
     intent: Optional[SearchIntent]
@@ -58,3 +80,8 @@ class AgentState(TypedDict):
     messages: Annotated[list, add_messages]
     status: str                                       # parsing, searching, aggregating, comparing, done, error
     error: Optional[str]
+    diagnostics: Optional[dict]                        # per-run timing + per-platform outcome (filled by run_search)
+    # ── Autonomous validation & remediation (the self-healing loop) ──
+    validation: Optional[dict]                         # latest ValidationReport
+    remediation_round: int                             # how many fix rounds have run (bounded)
+    remediation_log: list                              # cumulative timeline: [{round, issues, actions, outcome, proof}]

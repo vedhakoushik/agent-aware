@@ -17,11 +17,20 @@ import json
 import logging
 import os
 
-from backend.llm import get_chat_client
+from backend.llm import chat
 
 logger = logging.getLogger(__name__)
 
 HEADLESS = os.getenv("PLAYWRIGHT_HEADLESS", "false").lower() == "true"
+# Force the REAL Chrome binary + strip the automation flag (anti-bot), never the
+# bundled Chrome-for-Testing. Mirrors backend/tools/browser.py.
+_CHANNEL = (os.getenv("BROWSER_USE_CHANNEL", "chrome").strip() or "chrome")
+_IGNORE_AUTOMATION = ["--enable-automation"]
+_STEALTH_JS = (
+    "Object.defineProperty(navigator,'webdriver',{get:()=>undefined});"
+    "window.chrome={runtime:{}};"
+    "Object.defineProperty(navigator,'languages',{get:()=>['en-US','en']});"
+)
 _UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -136,14 +145,13 @@ Return ONLY a valid JSON array. No explanation.
 
 
 def _plan_actions(dom: dict, intent_params: dict, platform_name: str) -> list[dict]:
-    client = get_chat_client()
     elements_str = json.dumps({
         "inputs":  dom.get("inputs", [])[:30],
         "buttons": dom.get("buttons", [])[:15],
     })
     try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        resp = chat(
+            "universal",
             messages=[{
                 "role": "user",
                 "content": _PLAN_PROMPT.format(
@@ -401,13 +409,15 @@ async def universal_search(
 
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=HEADLESS, args=_ARGS)
+            browser = await p.chromium.launch(headless=HEADLESS, args=_ARGS,
+                                               channel=_CHANNEL, ignore_default_args=_IGNORE_AUTOMATION)
             ctx = await browser.new_context(
                 user_agent=_UA,
                 viewport={"width": 1280, "height": 900},
                 locale="en-US",
             )
             page = await ctx.new_page()
+            await page.add_init_script(_STEALTH_JS)
             await page.add_init_script(
                 "Object.defineProperty(navigator,'webdriver',{get:()=>undefined})"
             )

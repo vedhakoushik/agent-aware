@@ -6,7 +6,7 @@ import json
 import logging
 import os
 
-from backend.llm import get_chat_client
+from backend.llm import chat
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +89,6 @@ def chat_response(
     Given a user follow-up message and full search context, return:
     {message, should_search, refined_query}
     """
-    client = get_chat_client()
-
     results_summary     = _build_results_summary(platform_results, comparison)
     recommendation_sum  = _build_recommendation_summary(recommendation)
     intent_type         = (intent or {}).get("type", "general")
@@ -119,8 +117,8 @@ def chat_response(
         messages.append({"role": msg["role"], "content": msg["content"]})
 
     try:
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        resp = chat(
+            "chat",
             messages=messages,
             response_format={"type": "json_object"},
             temperature=0.3,

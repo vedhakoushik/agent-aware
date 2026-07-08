@@ -26,7 +26,7 @@ import json
 import logging
 import os
 
-from backend.llm import get_chat_client
+from backend.llm import chat
 from backend.state import AgentState
 from backend.progress import emit
 
@@ -127,9 +127,8 @@ def _summarize_groups_llm(query: str, intent_type: str, groups: list[dict]) -> d
         'Return JSON: {"summaries": {"<group type>": "<one sentence>", ...}}'
     )
     try:
-        client = get_chat_client()
-        resp = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        resp = chat(
+            "segregate",
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             temperature=0.3,

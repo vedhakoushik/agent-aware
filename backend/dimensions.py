@@ -38,6 +38,9 @@ _PRICE_KEYS = {"price", "price_per_night", "total_price", "price_per_day", "fare
 _SKIP_KEYS = {
     "name", "title", "car_model", "train_name", "operator", "vehicle",
     "url", "href", "link", "description", "price_raw", "raw", "snippet", "id",
+    # host/listing analytics scraped from sites like Airbnb/AirDNA — these are
+    # owner-economics metrics, NOT something a traveler books or compares.
+    "daily_rate", "occupancy", "occupancy_rate", "revenue", "adr", "revpar",
 }
 
 _BOOL_TRUE = {"true", "yes", "1", "included", "free", "available", "refundable"}

@@ -1,18 +1,73 @@
 import json
 import logging
 import os
+import re
 from datetime import datetime
 
 import yaml
 
-from backend.llm import get_chat_client
+from backend.llm import chat
 from backend.state import AgentState, SearchIntent
 from backend.memory.reliability import rank_by_reliability
 from backend.progress import emit
+from backend.agent_bus import send as bus_send
 
 logger = logging.getLogger(__name__)
 
+
+def _site_names(platform_ids: list, config: dict) -> list[str]:
+    names = {p["id"]: p["name"] for p in config.get("platforms", [])}
+    return [names.get(pid, pid) for pid in platform_ids]
+
+
+def _emit_plan_handoff(intent_type: str, platform_ids: list, params: dict, config: dict) -> None:
+    """Publish the Intent agent's plan to the Search coordinator on the Agent
+    Communication bus — the visible 'go search these websites with these params'
+    instruction the user wants to watch hand off between agents."""
+    sites = _site_names(platform_ids, config)
+    bus_send(
+        frm="Intent Agent", to="Search Coordinator", kind="handoff",
+        title=f"Plan: {intent_type} search across {len(sites)} site(s)",
+        content={"type": intent_type, "websites": sites, "params": params},
+        meta={"type": intent_type},
+    )
+
 _PLATFORMS_CACHE = None
+
+
+# ── Deterministic category planner ────────────────────────────────────────────
+# The LLM picks the category + websites, but our cloud LLMs hit daily rate limits
+# constantly and fall back to a weak local model that misclassifies (an iPhone
+# search getting routed to Booking.com). This keyword layer decides the category
+# WITHOUT any LLM, so routing stays correct even when every model is down. Ordered
+# most-specific first: travel/stay/event signals win before the generic product net.
+_CATEGORY_SIGNALS: list[tuple[str, str]] = [
+    ("flight", r"\b(flight|flights|fly|flying|airfare|air ?ticket|one[- ]?way|round[- ]?trip|non[- ]?stop|layover|airlines?)\b"),
+    ("train", r"\b(train|trains|irctc|railway|rail|pnr|sleeper coach|tatkal)\b"),
+    ("bus", r"\b(bus|buses|redbus|volvo bus|sleeper bus|seater)\b"),
+    ("car_rental", r"\b(car rental|rent a car|rental car|self[- ]?drive|zoomcar|myles)\b"),
+    ("hotel", r"\b(hotel|hotels|resort|resorts|stay|homestay|guest ?house|room|rooms|accommodation|check[- ]?in|check[- ]?out|villa|airbnb|oyo|lodging)\b"),
+    ("event", r"\b(concert|gig|movie|movies|cinema|show|event|events|ticket|tickets|festival|standup|stand[- ]?up|pvr|inox|bookmyshow|coldplay|tour 20\d\d)\b"),
+    ("restaurant", r"\b(restaurant|restaurants|food|eat|dine|dining|dinner|lunch|breakfast|brunch|cafe|café|pizza|biryani|burger|sushi|swiggy|zomato|order food|takeaway)\b"),
+    ("product", r"\b(buy|price|deal|deals|discount|order|iphone|samsung|galaxy|pixel|oneplus|redmi|realme|nothing phone|laptop|macbook|ipad|tablet|headphones?|earbuds?|airpods|smart ?watch|television|\btv\b|fridge|refrigerator|washing machine|ac\b|shoes|sneakers|pro max|\bgb\b|\bram\b|\bssd\b)\b"),
+]
+
+
+def _detect_category(query: str) -> str | None:
+    """Return the category implied by the query's wording, or None if ambiguous.
+    Deterministic — no LLM — so it works even when all model quotas are exhausted."""
+    q = (query or "").lower()
+    for category, pattern in _CATEGORY_SIGNALS:
+        if re.search(pattern, q):
+            return category
+    return None
+
+
+def _category_defaults(category: str, config: dict, limit: int = 5) -> list[str]:
+    """The platforms that actually serve a category, straight from the catalog —
+    used as a SAFE fallback (never arbitrary cross-category sites)."""
+    return [p["id"] for p in config.get("platforms", [])
+            if category in p.get("categories", [])][:limit]
 
 
 def _load_platforms() -> dict:
@@ -54,6 +109,10 @@ Rules:
 - Resolve relative dates to actual date strings (e.g. "this Friday" → "2026-06-07")
 - If critical info is missing (e.g. no destination for a flight), set clarification_needed=true
 - For budget hints like "cheap" or "under 5000", store as {{"max": 5000}} in params.budget
+- For products, if the user specifies a CONDITION (e.g. "brand new", "new", "refurbished",
+  "renewed", "used", "second hand", "pre-owned", "open box"), normalize it into params.condition
+  as one of: new, refurbished, used, open_box. If the user doesn't mention a condition, OMIT
+  params.condition entirely — do not assume "new".
 
 DATES ARE REQUIRED FOR BOOKINGS — hotels, flights, trains, buses and car rentals need dates
 to return real, priced availability. Apply this strictly:
@@ -85,11 +144,11 @@ Available platforms with keywords:
 def parse_intent_node(state: AgentState) -> dict:
     """LangGraph node: parse user query into structured intent."""
     emit("Understanding your request…", stage="intent", kind="start")
+    bus_send(frm="You", to="Intent Agent", kind="request",
+             title="New search request", content=state["query"])
     config = _load_platforms()
     platform_index = _platform_index_by_category(config)
     today = datetime.now().strftime("%Y-%m-%d (%A)")
-
-    client = get_chat_client()
 
     prompt = INTENT_SYSTEM.format(
         today=today,
@@ -97,8 +156,8 @@ def parse_intent_node(state: AgentState) -> dict:
     )
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+        response = chat(
+            "intent",
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": state["query"]},
@@ -112,10 +171,34 @@ def parse_intent_node(state: AgentState) -> dict:
         valid_ids = {p["id"] for p in config.get("platforms", [])}
         parsed["platforms"] = [pid for pid in parsed.get("platforms", []) if pid in valid_ids]
 
-        # Fallback: use category defaults if no valid platforms found
+        # DETERMINISTIC OVERRIDE — trust the keyword planner over the LLM's category.
+        # When the LLM is rate-limited and we're on the weak local fallback, it
+        # misclassifies (iPhone → general/hotel). A confident keyword match is more
+        # reliable for routing, so it wins; we only keep the LLM's type when the query
+        # gives no clear signal at all.
+        llm_type = parsed.get("type", "general")
+        detected = _detect_category(state["query"])
+        intent_type = detected or llm_type
+        if detected and detected != llm_type:
+            logger.info(f"Category override: LLM said '{llm_type}', keyword planner → '{detected}'")
+        parsed["type"] = intent_type
+
+        # CATEGORY GUARDRAIL — keep only platforms that actually serve the category.
+        # Now applied for EVERY concrete category (incl. when we just corrected a
+        # mislabeled 'general'), so a product search can never drive a hotel/flight site.
+        if intent_type != "general":
+            cat_of = {p["id"]: set(p.get("categories", [])) for p in config.get("platforms", [])}
+            kept = [pid for pid in parsed["platforms"] if intent_type in cat_of.get(pid, set())]
+            if len(kept) != len(parsed["platforms"]):
+                dropped = [p for p in parsed["platforms"] if p not in kept]
+                logger.info(f"Dropped off-category platforms for {intent_type}: {dropped}")
+            parsed["platforms"] = kept
+
+        # Fallback: SAFE category defaults from the catalog — never arbitrary sites.
+        # (The old `list(valid_ids)[:4]` is what surfaced Booking.com for an iPhone.)
         if not parsed["platforms"]:
-            intent_type = parsed.get("type", "general")
-            parsed["platforms"] = platform_index.get(intent_type, list(valid_ids))[:4]
+            parsed["platforms"] = (_category_defaults(intent_type, config)
+                                   or platform_index.get(intent_type, []))
 
         # Nudge the order toward platforms with a track record of actually
         # returning usable results — without abandoning the LLM's relevance
@@ -139,6 +222,17 @@ def parse_intent_node(state: AgentState) -> dict:
             "clarification_question": parsed.get("clarification_question"),
         }
 
+        # Show the user the plan: what kind of search this is + which sites we'll hit.
+        if not intent["clarification_needed"] and intent["platforms"]:
+            names = {p["id"]: p["name"] for p in config.get("platforms", [])}
+            site_list = ", ".join(names.get(pid, pid) for pid in intent["platforms"])
+            emit(f"Plan: {intent['type']} search → {site_list}", stage="intent", kind="ok")
+            _emit_plan_handoff(intent["type"], intent["platforms"], intent["params"], config)
+        elif intent["clarification_needed"]:
+            bus_send(frm="Intent Agent", to="You", kind="message",
+                     title="Needs clarification",
+                     content=intent.get("clarification_question") or "More detail needed.")
+
         logger.info(f"Intent parsed: type={intent['type']}, platforms={intent['platforms']}")
         if intent["clarification_needed"]:
             emit("Need a bit more detail…", stage="intent", kind="warn")
@@ -146,5 +240,33 @@ def parse_intent_node(state: AgentState) -> dict:
 
     except Exception as e:
         logger.error(f"Intent parsing failed: {e}")
+        # LLM-FREE FALLBACK — when every model is rate-limited, still run a useful
+        # search for date-optional categories using the deterministic planner. (Travel
+        # categories need date/route parsing we can't do reliably without an LLM, so
+        # those still ask the user rather than search with bad params.)
+        detected = _detect_category(state["query"])
+        if detected in ("product", "event", "restaurant", "general"):
+            plats = _category_defaults(detected, config)
+            try:
+                plats = rank_by_reliability(plats)
+            except Exception:
+                pass
+            if plats:
+                names = {p["id"]: p["name"] for p in config.get("platforms", [])}
+                emit(f"Plan: {detected} search → "
+                     + ", ".join(names.get(p, p) for p in plats[:5]),
+                     stage="intent", kind="ok")
+                bus_send(frm="Intent Agent", to="Search Coordinator", kind="error",
+                         title="All LLMs rate-limited — planning from keywords instead",
+                         content="Cloud models are out of quota; used the deterministic "
+                                 "keyword planner so the search still runs.")
+                _emit_plan_handoff(detected, plats[:5], {"query": state["query"]}, config)
+                intent: SearchIntent = {
+                    "type": detected, "raw_query": state["query"],
+                    "params": {"query": state["query"]}, "platforms": plats[:5],
+                    "clarification_needed": False, "clarification_question": None,
+                }
+                logger.info(f"Intent (LLM-free fallback): type={detected}, platforms={plats[:5]}")
+                return {"intent": intent, "status": "searching"}
         emit("Couldn't understand the request.", stage="intent", kind="warn")
         return {"intent": None, "status": "error", "error": f"Intent parsing failed: {e}"}
