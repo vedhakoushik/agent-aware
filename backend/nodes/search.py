@@ -832,6 +832,27 @@ def _search_one_platform_sync(platform_id: str, params: dict,
             snippets = scrape_snippets
             tier = "scrape"
 
+    # ── 1c. Selenium + BeautifulSoup — real Chrome renders the results page once,
+    #        BS4 parses it. Applies to EVERY platform (unlike the opt-in `fast_scrape`
+    #        tier above) — deliberately short-timeout (SELENIUM_TIMEOUT, default 6s)
+    #        with a fail-fast sanity check, so a heavy-JS/async-fare platform that
+    #        can't be scraped this way misses in a few seconds instead of the
+    #        "junk AND slow" failure the deep-link tier's own comments warn about.
+    #        Still LLM-parsed via _parse_with_groq like every other tier; a hit here
+    #        means browser-use never runs for this platform at all. ──
+    if not results and not force_browser and not _api_only:
+        from backend.tools.selenium_scraper import scrape_platform_selenium, is_enabled as _selenium_enabled
+        if _selenium_enabled():
+            logger.info(f"  → Selenium+BS4 scrape for {platform['name']}")
+            sel_snippets = _leg("selenium", lambda: scrape_platform_selenium(
+                platform["name"], platform_search_url or website,
+                timeout_seconds=float(os.getenv("SELENIUM_TIMEOUT", "6"))))
+            sel_results = _parse_with_groq(sel_snippets, platform, params, intent_type) if sel_snippets else []
+            if sel_results:
+                results = sel_results
+                snippets = sel_snippets
+                tier = "selenium"
+
     # ── 2. browser-use agent — an LLM drives a real browser (SLOW PATH, ~30-90s).
     #       Production search engines (Perplexity et al.) escalate to the expensive
     #       tier RARELY — cheap retrieval first, slow tier only when it returns nothing.

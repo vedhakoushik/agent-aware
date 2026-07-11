@@ -1433,7 +1433,8 @@ def render_insights(insights: dict):
 _TIER_LABEL = {
     "cache": "⚡ Cached (recent search)",
     "tavily": "Tavily (fast web)", "tavily-open": "Tavily (web)",
-    "scrape": "Direct scrape", "browser-use": "Live browser",
+    "scrape": "Direct scrape", "selenium": "Selenium scrape",
+    "browser-use": "Live browser",
     "universal": "Form automation",
     "google": "Google", "ddg": "DuckDuckGo", "": "—",
 }
