@@ -63,6 +63,41 @@ def _detect_category(query: str) -> str | None:
     return None
 
 
+# ── Out-of-scope circuit breaker ──────────────────────────────────────────────
+# The platform catalog only sells/lists physical products, travel, hotels,
+# restaurants and events — never subscriptions or streaming services. The LLM is
+# now instructed (see INTENT_SYSTEM) to recognize that itself, but a prompt
+# instruction can be ignored under a weak fallback model. This is a zero-extra-
+# LLM-call safety net for the clearest, highest-confidence misfires — e.g. "which
+# country has the cheapest Netflix" getting classified as a product search and
+# dispatched to Amazon/Flipkart/Croma, none of which can price a subscription.
+# Deliberately narrow and example-based (not exhaustive) so it never over-blocks a
+# legitimate product query — a Netflix GIFT CARD is still a real product; this only
+# fires when the classifier already forced the query into "product".
+_OUT_OF_SCOPE_SERVICES = (
+    "netflix", "spotify", "disney+", "disney plus", "hulu", "hbo max", "apple music",
+    "youtube premium", "hotstar", "sonyliv", "zee5", "prime video", "chatgpt plus",
+    "github copilot", "notion pro", "canva pro",
+)
+
+
+_PHYSICAL_COMPANION_WORDS = ("gift card", "gift voucher", "voucher", "subscription code")
+
+
+def _out_of_scope_service(query: str) -> str | None:
+    """Return the matched service name if the query names a subscription/streaming
+    service this app's platforms cannot price, else None. Skips queries that name a
+    genuinely purchasable companion item (a Netflix GIFT CARD is a real product
+    Amazon/Flipkart sell — only the subscription itself is out of scope)."""
+    q = (query or "").lower()
+    if any(w in q for w in _PHYSICAL_COMPANION_WORDS):
+        return None
+    for name in _OUT_OF_SCOPE_SERVICES:
+        if name in q:
+            return name
+    return None
+
+
 def _category_defaults(category: str, config: dict, limit: int = 5) -> list[str]:
     """The platforms that actually serve a category, straight from the catalog —
     used as a SAFE fallback (never arbitrary cross-category sites)."""
@@ -108,6 +143,14 @@ Rules:
   If the user doesn't mention a class, omit "cabin_class" from params (do not guess).
 - Resolve relative dates to actual date strings (e.g. "this Friday" → "2026-06-07")
 - If critical info is missing (e.g. no destination for a flight), set clarification_needed=true
+- OUT-OF-SCOPE QUERIES: the available platforms below sell/list physical products, travel,
+  hotels, restaurants and events — NOT subscriptions, streaming services, currency conversion,
+  or general trivia. If NO available platform can genuinely answer the query (e.g. "which
+  country has the cheapest Netflix", "convert 500 USD to INR", "what's the capital of France"),
+  do NOT force it into "product" or any other category just because it superficially resembles
+  one. Instead set clarification_needed=true and clarification_question to a short, honest
+  explanation of why this app can't help with that request — never guess a category and
+  dispatch a search that can't possibly return a correct answer.
 - For budget hints like "cheap" or "under 5000", store as {{"max": 5000}} in params.budget
 - For products, if the user specifies a CONDITION (e.g. "brand new", "new", "refurbished",
   "renewed", "used", "second hand", "pre-owned", "open box"), normalize it into params.condition
@@ -212,6 +255,24 @@ def parse_intent_node(state: AgentState) -> dict:
             parsed["platforms"] = rank_by_reliability(parsed["platforms"])
         except Exception as e:
             logger.debug(f"Reliability ranking skipped: {e}")
+
+        # OUT-OF-SCOPE CIRCUIT BREAKER — runs last, after the LLM/keyword/fallback
+        # layers above, so it always wins regardless of what populated `platforms`.
+        # Catches the LLM ignoring its out-of-scope instruction (e.g. "cheapest
+        # country for Netflix" forced into type=product, dispatched to e-commerce
+        # sites that can never answer it) WITHOUT spending another LLM call.
+        oos_service = _out_of_scope_service(state["query"]) if intent_type == "product" else None
+        if oos_service:
+            logger.info(f"Out-of-scope circuit breaker: '{oos_service}' is a subscription "
+                        f"service, not a product any configured platform sells — stopping "
+                        f"before search instead of dispatching a search that can't answer it.")
+            parsed["clarification_needed"] = True
+            parsed["clarification_question"] = (
+                f"This app searches products, travel, hotels, restaurants and events on "
+                f"specific platforms — it can't compare {oos_service.title()}'s subscription "
+                f"pricing across countries (no configured platform sells that). Try a "
+                f"dedicated pricing-comparison site for that instead.")
+            parsed["platforms"] = []
 
         intent: SearchIntent = {
             "type": parsed.get("type", "general"),

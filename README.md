@@ -35,9 +35,10 @@ Along the way, every message between agents is streamed to an **Agent Communicat
 ## Features
 
 - **Multi-platform search** — flights, hotels, products, trains, buses, events, restaurants, cars.
+- **RAG search-results cache** — before running the tier cascade for a platform, checks ChromaDB for a near-identical past search (same platform + category, high embedding similarity, within a freshness window). A hit skips Tavily, the parse LLM call, *and* any browser-use run entirely — the only optimization here that cuts both wall-clock and LLM usage at once. See [`backend/memory/search_cache.py`](backend/memory/search_cache.py) and [DESIGN.md](DESIGN.md#rag-search-results-cache).
 - **Multi-provider LLM router** (`backend/llm.py`) — each agent (intent, parser, insights, recommend…) is pinned to a provider:model and **auto-fails-over** down the chain when a free tier hits its rate limit. Spreads load so no single quota kills a run.
 - **Fast flight tier** — flights come from the **SerpApi Google Flights API** (real fares in ~1s), bypassing slow/fragile browser automation entirely.
-- **browser-use agent** — for platforms with no clean API, an LLM drives a **real Chrome** browser to fetch live results, with a local-Ollama fallback so it never dies on a rate limit.
+- **browser-use agent** — for platforms with no clean API, an LLM (default: **Cerebras**, for its 1M-token/day headroom) drives a **real Chrome** browser to fetch live results, with a local-Ollama fallback so it never dies on a rate limit. Up to `BROWSER_USE_CONCURRENCY` platforms are driven **in parallel**, each in its own fresh Chrome profile.
 - **Self-healing loop** — a `validate → remediate` cycle acts as critic + actor: it re-checks coverage/groundedness, recomputes the true cheapest option from real data, and re-searches empty platforms (bounded to 3 rounds).
 - **Agent Communication bus** — a live, full-width feed of the actual inter-agent messages *with payloads*, so the reasoning is transparent, not a black box.
 - **Monitor / supervisor agent** — when a browser tab gets blocked, it diagnoses the cause (CAPTCHA / bot-block / unreachable / timeout) and suggests a concrete fix.
@@ -51,9 +52,12 @@ Along the way, every message between agents is streamed to an **Agent Communicat
 | Orchestration | **LangGraph** `StateGraph` — cyclic graph with a self-healing `validate → remediate` loop |
 | UI | **Streamlit** — per-platform tabs, live agent feed, in-app browser view |
 | LLM | **Router** over Groq · Gemini · Cerebras · local Ollama, with per-task pinning + failover |
+| Cache | **RAG cache** (ChromaDB + sentence-transformers) — skips re-search on a near-identical recent query |
 | Data | SerpApi (flights), Tavily search, deterministic deep-link scrape, browser-use (live) |
 | Price history | ChromaDB |
 | Tracing | Langfuse (optional) |
+
+See **[ARCHITECTURE.md](ARCHITECTURE.md)** for the full system diagram and per-platform tier cascade, and **[DESIGN.md](DESIGN.md)** for the reasoning behind the harder calls (tier ordering, cache TTL/similarity bar, concurrency limits, failure philosophy).
 
 ## Quick start
 
@@ -89,7 +93,7 @@ Copy `.env.example` to `.env` and fill in:
 |---|---|---|---|
 | `GROQ_API_KEY` | **Yes** | primary reasoning LLM (parsing, insights, recommend) | https://console.groq.com |
 | `GEMINI_API_KEY` | Recommended | big-context failover so a single rate limit doesn't stall a run | https://aistudio.google.com/apikey |
-| `CEREBRAS_API_KEY` | Recommended | high-throughput free tier (1M tokens/day) for the heavy per-platform parser | https://cloud.cerebras.ai |
+| `CEREBRAS_API_KEY` | Recommended | high-throughput free tier (1M tokens/day) — powers the per-platform parser **and** is the default browser-use driver (`BROWSER_USE_PROVIDER`), since it doesn't rate-limit under the one-call-per-navigation-step load a browser agent generates | https://cloud.cerebras.ai |
 | `SERPAPI_KEY` | Recommended | real flight fares via Google Flights (free tier: 250 searches/mo) | https://serpapi.com |
 | `TAVILY_API_KEY` | Recommended | fast, reliable real-page search results | https://tavily.com |
 | `SLACK_BOT_TOKEN` | Optional | in-app Slack channel viewer → see `SETUP_SLACK.md` | https://api.slack.com/apps |
@@ -103,7 +107,8 @@ I'd rather be upfront about where this build fights you — most of these are *w
 
 - **Real-time browser scraping of travel/OTA sites is fragile.** Sites like MakeMyTrip / Skyscanner render fares async and bot-protect aggressively, so scrapes return junk, time out, or get a 403 / CAPTCHA. **Structured APIs (SerpApi) are the only fast + reliable path** — which is exactly the lesson that led to [agent-aware-pro](https://github.com/vedhakoushik/agent-aware-pro).
 - **Free-tier LLM rate limits.** Groq's free daily token cap and Gemini's low free request cap both get exhausted during heavy sessions. The multi-provider router mitigates this, but a run can still slow down or stall if several providers are down at once.
-- **Chrome automation constraints.** Modern Chrome blocks automating your *default* profile, so the app uses a separate dedicated profile (`launch_my_browser.bat` / `use_my_account.bat`). Parallel browser agents are serialized to avoid profile-lock collisions; occasional lock errors can still happen.
+- **Chrome automation constraints.** Modern Chrome blocks automating your *default* profile, so the app uses a separate dedicated profile (`launch_my_browser.bat` / `use_my_account.bat`). Running several browser-use agents in parallel (`BROWSER_USE_CONCURRENCY > 1`) is a memory/stability trade-off, not free — each is a full Chrome process, so it's bounded by your machine's free RAM, and pushing it too high risks the same profile-lock collisions that motivated serializing them in the first place. Tune it down (or back to `1`) if you see "Chrome for Testing" windows or `Event loop is closed` errors.
+- **RAG cache trades staleness for speed.** A cache hit is explicitly labeled ("⚡ Cached") and bounded by a TTL (20 min for price-volatile categories, 60 min otherwise), but within that window it will show you a price that isn't a live re-check. Set `SEARCH_CACHE_ENABLED=false` to disable it entirely.
 - **CAPTCHAs are not solved — by design.** When a site throws a bot-wall the agent honestly reports "not accessible" rather than trying to defeat it.
 - **Not production-hardened.** Single Streamlit process (one heavy request blocks others), demo-grade error handling in places, no user accounts unless you enable the optional Google gate, and secrets live in a local `.env`. Treat it as a **demo / learning artifact**, not a service.
 

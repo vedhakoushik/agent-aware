@@ -489,6 +489,27 @@ def _refresh_parse_concurrency() -> None:
         pass
 
 
+def _loads_lenient(content: str) -> dict:
+    """Parse an LLM JSON reply even when it's wrapped in ```json fences, prefixed with
+    prose, or has trailing junk — some platform-parse models return exactly that
+    'invalid JSON'. Raises ValueError only when no JSON object can be recovered."""
+    if not content or not content.strip():
+        raise ValueError("empty content")
+    s = content.strip()
+    if s.startswith("```"):
+        s = _re.sub(r"^```[a-zA-Z0-9]*\s*", "", s)
+        s = _re.sub(r"\s*```$", "", s).strip()
+    try:
+        return json.loads(s)
+    except Exception:
+        pass
+    # Recover the outermost {...} object if the model added prose around it.
+    i, j = s.find("{"), s.rfind("}")
+    if i != -1 and j > i:
+        return json.loads(s[i:j + 1])
+    raise ValueError("no JSON object found in model reply")
+
+
 def _parse_with_groq(snippets: list[dict], platform: dict, params: dict,
                      intent_type: str = "general") -> list[dict]:
     if not snippets:
@@ -553,12 +574,15 @@ def _parse_with_groq(snippets: list[dict], platform: dict, params: dict,
                     # search to the overall timeout. Tunable via PARSE_TIMEOUT.
                     timeout=float(os.getenv("PARSE_TIMEOUT", "22") or 22),
                 )
-                parsed = json.loads(resp.choices[0].message.content)
+                parsed = _loads_lenient(resp.choices[0].message.content)
                 raw_results = parsed.get("results", [])
                 break
 
             except Exception as e:
                 msg = str(e).lower()
+                # TEMP (JSON-robustness): malformed/empty JSON is retryable too, not just
+                # rate limits — some platform-parse models return invalid JSON.
+                _json_err = isinstance(e, (json.JSONDecodeError, ValueError)) or "json" in msg or "expecting value" in msg
                 if ("rate" in msg or "quota" in msg or "exhausted" in msg) and attempt < 2:
                     wait = 8.0
                     m = _re.search(r"try again in ([\d.]+)s", str(e))
@@ -566,6 +590,10 @@ def _parse_with_groq(snippets: list[dict], platform: dict, params: dict,
                         wait = float(m.group(1)) + 0.5
                     logger.info(f"  All providers busy ({platform['name']}), retrying in {wait:.1f}s…")
                     time.sleep(wait)
+                    continue
+                if _json_err and attempt < 2:
+                    logger.info(f"  Malformed JSON from {platform['name']} parser; retrying...")
+                    time.sleep(0.5)
                     continue
                 logger.warning(f"Parse error ({platform['name']}): {e}")
                 return []
@@ -750,13 +778,28 @@ def _search_one_platform_sync(platform_id: str, params: dict,
                             "n": len(out) if out else 0})
         return out
 
+    # ── 0. RAG cache — a near-identical (platform, params) search answered recently.
+    #       Skips the ENTIRE cascade below, including the parse LLM call and any
+    #       browser-use run, so this is the only tier that cuts both time AND LLM
+    #       usage. Bypassed on a user-driven retry (force_browser) — that's an
+    #       explicit "go live again" signal. Always labeled "cache" in the UI with
+    #       its age, never presented as a fresh live result. ──
+    if not force_browser:
+        from backend.memory.search_cache import get_cached
+        cached = _leg("cache", lambda: get_cached(intent_type, platform_id, params) or [])
+        if cached:
+            results = cached
+            tier = "cache"
+            emit(f"⚡ {platform['name']}: served from cache", stage="search", kind="ok")
+
     # ── 1. Tavily — fast, real-page snippets restricted to the platform's own
     #       domain (~3s). This is the FAST PATH and covers most platforms.
     #       Skipped entirely on a user-driven retry (force_browser): we already
-    #       know Tavily was thin, so go straight to the live browser. ──
+    #       know Tavily was thin, so go straight to the live browser. Also
+    #       skipped on a cache hit — `results` is already populated. ──
     tavily_key = os.getenv("TAVILY_API_KEY", "")
     tavily_raw_count = 0
-    if tavily_key and not force_browser:
+    if tavily_key and not force_browser and not results:
         logger.info(f"  → Tavily (primary) for {platform['name']}")
         domain = _domain_from_url(website) if website else ""
         snippets = _leg("tavily", lambda: _tavily_search(query, tavily_key, domain=domain))
@@ -826,7 +869,8 @@ def _search_one_platform_sync(platform_id: str, params: dict,
                                      hint=hint, platform_id=platform_id,
                                      headless=(False if headed else None), homepage=website),
                     # A visible, user-guided run needs more time than a headless one.
-                    timeout=150 if headed else 75))
+                    # TEMP (bot-reasoning test): headless budget now tunable via BROWSER_USE_TIMEOUT.
+                    timeout=150 if headed else int(os.getenv("BROWSER_USE_TIMEOUT", "75"))))
             bu_results = _parse_with_groq(bu_snippets, platform, params, intent_type) if bu_snippets else []
             # Keep the live results when they're richer (more total detail) OR
             # simply more numerous than what Tavily gave us.
@@ -874,6 +918,12 @@ def _search_one_platform_sync(platform_id: str, params: dict,
 
     elapsed = round(time.time() - start, 2)
     logger.info(f"  {platform['name']}: {len(results)} results in {elapsed}s via {tier or 'none'}")
+
+    # Feed the RAG cache for next time — only a FRESH live result is worth caching;
+    # a cache-hit re-caching itself would just refresh its own timestamp for free.
+    if results and tier != "cache":
+        from backend.memory.search_cache import set_cached
+        set_cached(intent_type, platform_id, params, results)
 
     # Build a plain-English roadblock when nothing came back, so the UI can explain
     # what happened and offer the "help it along" retry instead of a silent blank.
