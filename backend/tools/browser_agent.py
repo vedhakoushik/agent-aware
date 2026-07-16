@@ -43,7 +43,7 @@ def _cdp_reachable(cdp_url: str) -> bool:
     try:
         import httpx
         base = cdp_url.rstrip("/")
-        r = httpx.get(f"{base}/json/version", timeout=1.5)
+        r = httpx.get(f"{base}/json/version", timeout=30)
         return r.status_code == 200
     except Exception:
         return False
@@ -425,7 +425,7 @@ async def _run_agent(platform_name: str, entry_url: str, params: dict, max_steps
         browser_profile=profile,
         fallback_llm=fallback_llm,
         use_vision=use_vision,
-        max_failures=2,
+        max_failures=int(os.getenv("BROWSER_USE_MAX_FAILURES", "2")),  # TEMP: raise via .env to push past bot-walls
         flash_mode=flash,        # no chain-of-thought tokens → fastest steps
         max_actions_per_step=4,  # batch actions (fill + submit in one step)
         extend_system_message=("Be extremely fast and concise. Batch multiple actions "

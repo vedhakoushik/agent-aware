@@ -1,5 +1,7 @@
 # ── Secrets & credentials — never commit ──
 .env
+.env.*
+!.env.example
 .streamlit/secrets.toml
 
 # ── Local data (sqlite, chroma, logs) ──
