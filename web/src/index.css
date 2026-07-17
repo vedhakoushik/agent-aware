@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Base ── */
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  @apply bg-cream text-ink font-sans antialiased;
+}
+::selection {
+  @apply bg-flame text-card;
+}
+
+/* warm scrollbars everywhere */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-line rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gold;
+}
+
+/* ── Shared primitives ── */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
+      font-semibold text-card text-sm
+      bg-gradient-to-r from-orange to-flame
+      shadow-[0_6px_18px_rgba(44,42,188,.30)]
+      transition-all duration-150
+      hover:-translate-y-px hover:shadow-[0_10px_24px_rgba(79,70,229,.40)]
+      active:translate-y-0 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-card
+      px-3 py-1 text-xs font-medium text-muted;
+  }
+  .cap {
+    @apply text-[0.66rem] font-bold uppercase tracking-[0.14em] text-faint;
+  }
+  .panel {
+    @apply rounded-2xl border border-line bg-card shadow-card;
+  }
+}
+
+/* thinking shimmer bar */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(44, 42, 188, 0.08) 25%,
+    rgba(79, 70, 229, 0.22) 50%,
+    rgba(44, 42, 188, 0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

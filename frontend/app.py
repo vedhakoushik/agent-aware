@@ -155,9 +155,9 @@ def _eval_checklist_html(diagnostics: dict, live: bool) -> str:
     """Left panel: a checklist of pipeline stages (done / running / pending) with
     per-platform pass/fail and an explicit list of where things are breaking."""
     dot = ('<span style="color:#22c55e;font-weight:700;">● live</span>' if live
-           else '<span style="color:#64748b;font-weight:600;">idle</span>')
+           else '<span style="color:#9A7E58;font-weight:600;">idle</span>')
     head = (f'<div style="font-size:0.74rem;font-weight:800;letter-spacing:.06em;'
-            f'text-transform:uppercase;color:#475569;display:flex;justify-content:space-between;'
+            f'text-transform:uppercase;color:#6B5338;display:flex;justify-content:space-between;'
             f'align-items:center;margin-bottom:8px;"><span>✅ Eval checklist</span>{dot}</div>')
 
     diagnostics = diagnostics or {}
@@ -167,14 +167,14 @@ def _eval_checklist_html(diagnostics: dict, live: bool) -> str:
     rows = ""
     for node, label in _STAGES:
         if node in done:
-            mark, color, extra = "✓", "#16a34a", f'<span style="color:#64748b;">{done[node]}s</span>'
+            mark, color, extra = "✓", "#16a34a", f'<span style="color:#9A7E58;">{done[node]}s</span>'
         elif live:
-            mark, color, extra = "◷", "#d97706", '<span style="color:#64748b;">…</span>'
+            mark, color, extra = "◷", "#d97706", '<span style="color:#9A7E58;">…</span>'
         else:
             mark, color, extra = "·", "#cbd5e1", ""
         rows += (f'<div style="display:flex;gap:8px;align-items:baseline;font-size:0.8rem;padding:2px 0;">'
                  f'<span style="color:{color};font-weight:700;width:14px;">{mark}</span>'
-                 f'<span style="flex:1;color:#334155;">{label}</span>{extra}</div>')
+                 f'<span style="flex:1;color:#4A3623;">{label}</span>{extra}</div>')
         # Under "search platforms", list each platform's pass/fail.
         if node == "search_platforms" and plats:
             for p in plats:
@@ -184,9 +184,9 @@ def _eval_checklist_html(diagnostics: dict, live: bool) -> str:
                 badge = (f'<span style="color:#16a34a;">✓ {n} · {tier}</span>' if ok
                          else '<span style="color:#dc2626;">✗ 0</span>')
                 rows += (f'<div style="display:flex;gap:6px;font-size:0.74rem;padding:1px 0 1px 22px;'
-                         f'color:#64748b;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;'
+                         f'color:#9A7E58;"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;'
                          f'white-space:nowrap;">{_esc(p.get("platform_name",""),22)}</span>'
-                         f'{badge}<span style="color:#64748b;width:42px;text-align:right;">'
+                         f'{badge}<span style="color:#9A7E58;width:42px;text-align:right;">'
                          f'{p.get("elapsed",0)}s</span></div>')
 
     # Breakpoints — explicit "where it's breaking" callouts.
@@ -211,10 +211,10 @@ def _eval_checklist_html(diagnostics: dict, live: bool) -> str:
                     '✓ No breakpoints — every stage completed.</div>')
 
     total = diagnostics.get("total_seconds", 0) or 0
-    foot = (f'<div style="margin-top:8px;font-size:0.72rem;color:#64748b;">total {total:.1f}s</div>'
+    foot = (f'<div style="margin-top:8px;font-size:0.72rem;color:#9A7E58;">total {total:.1f}s</div>'
             if total else "")
     if not done and not live:
-        body = ('<div style="font-size:0.8rem;color:#64748b;border:1px dashed #e2e8f0;'
+        body = ('<div style="font-size:0.8rem;color:#9A7E58;border:1px dashed #EADFCB;'
                 'border-radius:8px;padding:12px;">Run a search — each stage and any '
                 'breakpoint will check off here in real time.</div>')
         return head + body
@@ -227,7 +227,7 @@ _STATUS_META = {
     "stuck":   ("✗ stuck",   "#dc2626"),
 }
 _CAT_COLOR = {"bot_block": "#dc2626", "navigation": "#d97706", "timeout": "#0891b2",
-              "no_results": "#64748b", "unknown": "#64748b"}
+              "no_results": "#9A7E58", "unknown": "#9A7E58"}
 
 
 def _step_mark(eval_str: str) -> tuple[str, str]:
@@ -237,7 +237,7 @@ def _step_mark(eval_str: str) -> tuple[str, str]:
         return ("✓", "#16a34a")
     if "fail" in e:
         return ("✗", "#dc2626")
-    return ("›", "#6366f1")
+    return ("›", "#C05800")
 
 
 def _platform_activity_events(events: list, platform_name: str) -> list:
@@ -251,11 +251,11 @@ def _platform_activity_events(events: list, platform_name: str) -> list:
 
 
 _EVENT_KIND_META = {
-    "start": ("▶", "#6366f1"),
+    "start": ("▶", "#C05800"),
     "ok":    ("✓", "#16a34a"),
     "done":  ("✓", "#16a34a"),
     "warn":  ("⚠", "#dc2626"),
-    "info":  ("·", "#64748b"),
+    "info":  ("·", "#9A7E58"),
 }
 
 
@@ -270,7 +270,7 @@ def _render_platform_tab_html(platform_name: str, browser_run: dict | None,
             status = "ok" if diag_entry.get("n_results") else "stuck"
         else:
             status = "running"
-    s_label, s_color = _STATUS_META.get(status, ("◷ queued", "#94a3b8"))
+    s_label, s_color = _STATUS_META.get(status, ("◷ queued", "#B3996E"))
 
     html = (f'<div style="font-size:0.8rem;font-weight:700;color:{s_color};'
             f'margin-bottom:6px;">{s_label}</div>')
@@ -280,50 +280,50 @@ def _render_platform_tab_html(platform_name: str, browser_run: dict | None,
     if plat_events:
         rows = ""
         for e in plat_events:
-            icon, color = _EVENT_KIND_META.get(e.get("kind"), ("·", "#64748b"))
-            rows += (f'<div style="font-size:0.74rem;padding:1px 0;color:#334155;">'
+            icon, color = _EVENT_KIND_META.get(e.get("kind"), ("·", "#9A7E58"))
+            rows += (f'<div style="font-size:0.74rem;padding:1px 0;color:#4A3623;">'
                      f'<span style="color:{color};font-weight:700;">{icon}</span> '
                      f'{_esc(e.get("message",""), 90)}'
-                     f'<span style="color:#94a3b8;float:right;">{e.get("t",0)}s</span></div>')
+                     f'<span style="color:#B3996E;float:right;">{e.get("t",0)}s</span></div>')
         html += (f'<div style="margin-bottom:8px;"><div style="font-size:0.68rem;font-weight:700;'
-                 f'letter-spacing:.05em;text-transform:uppercase;color:#475569;margin-bottom:3px;">'
-                 f'Agent activity</div><div style="background:#fbfcfe;border:1px solid #eef2f7;'
+                 f'letter-spacing:.05em;text-transform:uppercase;color:#6B5338;margin-bottom:3px;">'
+                 f'Agent activity</div><div style="background:#FCF8EE;border:1px solid #F1E8D8;'
                  f'border-radius:6px;padding:5px 7px;">{rows}</div></div>')
 
     # Browser steps — only present when this platform needed live browser automation.
     if browser_run:
         url = _esc(browser_run.get("url") or browser_run.get("entry_url", ""), 64)
         if url:
-            html += f'<div style="font-size:0.7rem;color:#64748b;margin-bottom:4px;">{url}</div>'
+            html += f'<div style="font-size:0.7rem;color:#9A7E58;margin-bottom:4px;">{url}</div>'
         steps_html = ""
         for s in browser_run.get("steps", [])[-10:]:
             mk, mc = _step_mark(s.get("eval", ""))
             goal = _esc(s.get("goal") or s.get("action", ""), 70)
             act = _esc(s.get("action", ""), 36)
-            steps_html += (f'<div style="font-size:0.72rem;color:#334155;padding:1px 0;display:flex;gap:5px;">'
+            steps_html += (f'<div style="font-size:0.72rem;color:#4A3623;padding:1px 0;display:flex;gap:5px;">'
                            f'<span style="color:{mc};font-weight:700;width:14px;">{s.get("n","")}</span>'
                            f'<span style="color:{mc};">{mk}</span>'
                            f'<span style="flex:1;">{goal}'
-                           + (f' <span style="color:#64748b;">[{act}]</span>' if act else '')
-                           + f'</span><span style="color:#64748b;">{s.get("t",0)}s</span></div>')
+                           + (f' <span style="color:#9A7E58;">[{act}]</span>' if act else '')
+                           + f'</span><span style="color:#9A7E58;">{s.get("t",0)}s</span></div>')
         if steps_html:
             html += (f'<div style="margin-bottom:8px;"><div style="font-size:0.68rem;font-weight:700;'
-                     f'letter-spacing:.05em;text-transform:uppercase;color:#475569;margin-bottom:3px;">'
-                     f'Browser steps</div><div style="max-height:180px;overflow-y:auto;background:#fbfcfe;'
-                     f'border:1px solid #eef2f7;border-radius:6px;padding:5px 7px;">{steps_html}</div></div>')
+                     f'letter-spacing:.05em;text-transform:uppercase;color:#6B5338;margin-bottom:3px;">'
+                     f'Browser steps</div><div style="max-height:180px;overflow-y:auto;background:#FCF8EE;'
+                     f'border:1px solid #F1E8D8;border-radius:6px;padding:5px 7px;">{steps_html}</div></div>')
 
         a = browser_run.get("analysis")
         if status == "stuck" and a:
             cat = a.get("category", "unknown")
-            cc = _CAT_COLOR.get(cat, "#64748b")
+            cc = _CAT_COLOR.get(cat, "#9A7E58")
             fix = a.get("suggested_hint")
             fix_html = (f'<div style="margin-top:4px;color:#0f766e;">💡 <b>Fix:</b> {_esc(fix,160)}</div>'
                         if fix else '<div style="margin-top:4px;color:#991b1b;">Not fixable by guidance.</div>')
-            html += (f'<div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:6px;'
+            html += (f'<div style="background:#FBEEDD;border:1px solid #EAD3AC;border-radius:6px;'
                      f'padding:6px 8px;font-size:0.72rem;color:#3730a3;margin-bottom:6px;">'
                      f'<div style="display:flex;justify-content:space-between;">'
                      f'<b>🩺 Monitor agent</b><span style="color:{cc};font-weight:700;">{cat}</span></div>'
-                     f'<div style="color:#4338ca;margin-top:2px;">{_esc(a.get("diagnosis",""),180)}</div>'
+                     f'<div style="color:#9A3B00;margin-top:2px;">{_esc(a.get("diagnosis",""),180)}</div>'
                      f'{fix_html}</div>')
         elif status == "stuck" and browser_run.get("error"):
             html += (f'<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;'
@@ -342,10 +342,10 @@ def _render_platform_tab_html(platform_name: str, browser_run: dict | None,
         summary = f'{n} result{"s" if n != 1 else ""} · {tier} · {diag_entry.get("elapsed",0)}s'
         if rb.get("reason"):
             summary += f' · ⚠ {_esc(rb["reason"], 80)}'
-        html += f'<div style="font-size:0.72rem;color:#64748b;margin-top:6px;">{summary}</div>'
+        html += f'<div style="font-size:0.72rem;color:#9A7E58;margin-top:6px;">{summary}</div>'
 
     if not plat_events and not browser_run and not diag_entry:
-        html += '<div style="font-size:0.8rem;color:#64748b;">Waiting to start…</div>'
+        html += '<div style="font-size:0.8rem;color:#9A7E58;">Waiting to start…</div>'
 
     return html
 
@@ -366,17 +366,17 @@ def _render_platform_tabs(slot, browser_runs: list, diagnostics: dict, events: l
             names.append(nm)
 
     dot = ('<span style="color:#22c55e;font-weight:700;">● live</span>' if live
-           else '<span style="color:#64748b;font-weight:600;">idle</span>')
+           else '<span style="color:#9A7E58;font-weight:600;">idle</span>')
     with slot.container():
         st.markdown(
             f'<div style="font-size:0.74rem;font-weight:800;letter-spacing:.06em;'
-            f'text-transform:uppercase;color:#475569;display:flex;justify-content:space-between;'
+            f'text-transform:uppercase;color:#6B5338;display:flex;justify-content:space-between;'
             f'align-items:center;margin-bottom:8px;"><span>🌐 Platform agents ({len(names)})</span>{dot}</div>',
             unsafe_allow_html=True)
 
         if not names:
             st.markdown(
-                '<div style="font-size:0.8rem;color:#64748b;border:1px dashed #e2e8f0;'
+                '<div style="font-size:0.8rem;color:#9A7E58;border:1px dashed #EADFCB;'
                 'border-radius:8px;padding:12px;">Run a search — each platform gets its own tab here, '
                 'showing everything its agent does, step by step, with a ✓/✗ status.</div>',
                 unsafe_allow_html=True)
@@ -417,25 +417,25 @@ def _esc_full(s) -> str:
 
 
 _COMMS_KIND = {
-    "request":   ("➡️", "#6366f1", "request"),
+    "request":   ("➡️", "#C05800", "request"),
     "response":  ("⬅️", "#0891b2", "response"),
     "handoff":   ("🤝", "#7c3aed", "handoff"),
     "dispatch":  ("📤", "#0d9488", "dispatch"),
     "data":      ("📦", "#16a34a", "data"),
-    "diagnosis": ("🩺", "#4338ca", "diagnosis"),
+    "diagnosis": ("🩺", "#9A3B00", "diagnosis"),
     "error":     ("⚠️", "#dc2626", "error"),
-    "message":   ("💬", "#64748b", "message"),
+    "message":   ("💬", "#9A7E58", "message"),
 }
 
 
 def _agent_color(name: str) -> str:
     n = (name or "").lower()
     if n in ("you", "user"):
-        return "#0f172a"
+        return "#2A1A0A"
     if n.startswith("llm"):
         return "#0891b2"
     if "monitor" in n:
-        return "#4338ca"
+        return "#9A3B00"
     if "coordinator" in n or "intent" in n:
         return "#7c3aed"
     return "#0d9488"
@@ -443,20 +443,26 @@ def _agent_color(name: str) -> str:
 
 def _agent_comms_html(events: list, live: bool) -> str:
     dot = ('<span style="color:#22c55e;font-weight:700;">● live</span>' if live
-           else '<span style="color:#64748b;font-weight:600;">idle</span>')
+           else '<span style="color:#9A7E58;font-weight:600;">idle</span>')
     n = len(events or [])
-    head = (f'<div style="font-size:0.74rem;font-weight:800;letter-spacing:.06em;'
-            f'text-transform:uppercase;color:#475569;display:flex;justify-content:space-between;'
+    # `comms-shell` carries the animated aurora background (style.css); `live`
+    # speeds it up while a search is streaming so the panel visibly "breathes".
+    shell_open = f'<div class="comms-shell{" comms-live" if live else ""}"><div class="comms-inner">'
+    shell_close = '</div></div>'
+    head = (shell_open +
+            f'<div style="font-size:0.74rem;font-weight:800;letter-spacing:.06em;'
+            f'text-transform:uppercase;color:#6B5338;display:flex;justify-content:space-between;'
             f'align-items:center;margin-bottom:10px;">'
             f'<span>🛰 Agent communication ({n})</span>{dot}</div>')
 
     if not events:
-        return head + ('<div style="font-size:0.8rem;color:#64748b;border:1px dashed #e2e8f0;'
+        return head + ('<div style="font-size:0.8rem;color:#9A7E58;border:1px dashed #EADFCB;'
                        'border-radius:8px;padding:12px;">Run a search — every message agents send '
                        'each other appears here: the request to the LLM and the plan it returns, '
                        'the instructions handed to the search coordinator, the params dispatched to '
                        'each website agent and the results they send back, and the monitor agent’s '
-                       'diagnosis when a tab gets stuck. Expand any message to read the exact payload.</div>')
+                       'diagnosis when a tab gets stuck. Expand any message to read the exact payload.</div>'
+                       + shell_close)
 
     rows = ""
     for e in events:
@@ -469,26 +475,26 @@ def _agent_comms_html(events: list, live: bool) -> str:
         details = ""
         if content:
             details = (f'<details style="margin-top:5px;"><summary style="cursor:pointer;'
-                       f'font-size:0.72rem;color:#6366f1;">view message</summary>'
+                       f'font-size:0.72rem;color:#C05800;">view message</summary>'
                        f'<pre style="white-space:pre-wrap;word-break:break-word;font-size:0.72rem;'
-                       f'background:#f8fafc;border:1px solid #eef2f7;border-radius:6px;'
-                       f'padding:8px 10px;margin:5px 0 0;color:#334155;max-height:280px;'
+                       f'background:#F7F1E4;border:1px solid #F1E8D8;border-radius:6px;'
+                       f'padding:8px 10px;margin:5px 0 0;color:#4A3623;max-height:280px;'
                        f'overflow:auto;">{_esc_full(content)}</pre></details>')
         rows += (
-            f'<div style="border-left:3px solid {color};background:#fff;border:1px solid #eef2f7;'
+            f'<div style="border-left:3px solid {color};background:#fff;border:1px solid #F1E8D8;'
             f'border-left-width:3px;border-radius:8px;padding:8px 11px;margin-bottom:7px;">'
             f'<div style="display:flex;align-items:center;gap:6px;font-size:0.78rem;flex-wrap:wrap;">'
             f'<b style="color:{fc};">{frm}</b>'
-            f'<span style="color:#94a3b8;">→</span>'
+            f'<span style="color:#B3996E;">→</span>'
             f'<b style="color:{tc};">{to}</b>'
             f'<span style="background:{color}1a;color:{color};font-weight:700;font-size:0.62rem;'
             f'text-transform:uppercase;letter-spacing:.04em;padding:1px 7px;border-radius:999px;">'
             f'{icon} {label}</span>'
-            f'<span style="margin-left:auto;color:#94a3b8;font-size:0.7rem;">{t}s</span></div>'
-            f'<div style="font-size:0.8rem;color:#0f172a;margin-top:3px;">{title}</div>'
+            f'<span style="margin-left:auto;color:#B3996E;font-size:0.7rem;">{t}s</span></div>'
+            f'<div style="font-size:0.8rem;color:#2A1A0A;margin-top:3px;">{title}</div>'
             f'{details}</div>'
         )
-    return head + rows
+    return head + rows + shell_close
 
 
 def render_agent_comms(slot, events, live: bool) -> None:
@@ -512,8 +518,8 @@ _VERDICT_STYLE = {
 def _validation_html(validation: dict, remediation_log: list) -> str:
     if not validation:
         return ('<div style="font-size:0.74rem;font-weight:800;letter-spacing:.06em;'
-                'text-transform:uppercase;color:#475569;margin-bottom:8px;">🛡 Validation</div>'
-                '<div style="font-size:0.8rem;color:#64748b;border:1px dashed #e2e8f0;'
+                'text-transform:uppercase;color:#6B5338;margin-bottom:8px;">🛡 Validation</div>'
+                '<div style="font-size:0.8rem;color:#9A7E58;border:1px dashed #EADFCB;'
                 'border-radius:8px;padding:12px;">Run a search — the Validation Agent automatically '
                 'checks the result against the real data, fixes the recommendation if it’s wrong, '
                 'and shows exactly what it changed and why.</div>')
@@ -523,10 +529,10 @@ def _validation_html(validation: dict, remediation_log: list) -> str:
     n_pass = sum(1 for c in checks if c.get("passed"))
     head = (f'<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">'
             f'<span style="font-size:0.74rem;font-weight:800;letter-spacing:.06em;'
-            f'text-transform:uppercase;color:#475569;">🛡 Validation</span>'
+            f'text-transform:uppercase;color:#6B5338;">🛡 Validation</span>'
             f'<span style="background:{color}1a;color:{color};font-weight:800;font-size:0.74rem;'
             f'padding:2px 12px;border-radius:999px;">{icon} {label}</span>'
-            f'<span style="margin-left:auto;color:#64748b;font-size:0.74rem;">'
+            f'<span style="margin-left:auto;color:#9A7E58;font-size:0.74rem;">'
             f'{n_pass}/{len(checks)} checks passed · {validation.get("elapsed_seconds",0)}s</span></div>')
 
     # Checks
@@ -539,15 +545,15 @@ def _validation_html(validation: dict, remediation_log: list) -> str:
         proof_html = ""
         if proof:
             proof_html = (f'<details style="margin-top:3px;"><summary style="cursor:pointer;'
-                          f'font-size:0.68rem;color:#6366f1;">proof</summary>'
-                          f'<pre style="white-space:pre-wrap;font-size:0.68rem;background:#f8fafc;'
-                          f'border:1px solid #eef2f7;border-radius:6px;padding:6px 8px;margin:4px 0 0;'
-                          f'color:#334155;">{_esc_full(_json.dumps(proof, indent=2, default=str))}</pre></details>')
-        rows += (f'<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;">'
+                          f'font-size:0.68rem;color:#C05800;">proof</summary>'
+                          f'<pre style="white-space:pre-wrap;font-size:0.68rem;background:#F7F1E4;'
+                          f'border:1px solid #F1E8D8;border-radius:6px;padding:6px 8px;margin:4px 0 0;'
+                          f'color:#4A3623;">{_esc_full(_json.dumps(proof, indent=2, default=str))}</pre></details>')
+        rows += (f'<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #F4ECD9;">'
                  f'<span style="color:{mc};font-weight:800;">{mark}</span>'
-                 f'<div style="flex:1;"><span style="font-weight:700;font-size:0.78rem;color:#0f172a;">'
+                 f'<div style="flex:1;"><span style="font-weight:700;font-size:0.78rem;color:#2A1A0A;">'
                  f'{_esc_full(c.get("name",""))}</span>'
-                 f'<span style="font-size:0.78rem;color:#475569;"> — {_esc_full(c.get("detail",""))}</span>'
+                 f'<span style="font-size:0.78rem;color:#6B5338;"> — {_esc_full(c.get("detail",""))}</span>'
                  f'{proof_html}</div></div>')
 
     # Fix details
@@ -560,7 +566,7 @@ def _validation_html(validation: dict, remediation_log: list) -> str:
             f'padding:9px 12px;margin-top:9px;">'
             f'<div style="font-weight:800;font-size:0.74rem;color:#7c3aed;margin-bottom:4px;">'
             f'🛠️ Fix applied — {_esc_full(fd.get("what",""))}</div>'
-            f'<div style="font-size:0.78rem;color:#334155;">'
+            f'<div style="font-size:0.78rem;color:#4A3623;">'
             f'<b>Before:</b> {_esc_full(b.get("platform"))} ₹{_esc_full(b.get("price"))}'
             + (f' <span style="color:#dc2626;">({_esc_full(", ".join(b.get("violations") or []))})</span>' if b.get("violations") else "")
             + f'<br><b>After:</b> <span style="color:#16a34a;">{_esc_full(a.get("platform_name") or a.get("platform"))} ₹{_esc_full(a.get("price"))}</span>'
@@ -575,13 +581,13 @@ def _validation_html(validation: dict, remediation_log: list) -> str:
             f'padding:9px 12px;margin-top:9px;">'
             f'<div style="font-weight:800;font-size:0.74rem;color:#b45309;margin-bottom:4px;">'
             f'⚖️ Couldn’t fully meet: {_esc_full(n.get("constraint",""))}</div>'
-            f'<div style="font-size:0.78rem;color:#334155;">{_esc_full(n.get("issue",""))}<br>'
+            f'<div style="font-size:0.78rem;color:#4A3623;">{_esc_full(n.get("issue",""))}<br>'
             f'<b>Best available:</b> {_esc_full(n.get("best_available",""))} · '
             f'<b>What we did:</b> {_esc_full(n.get("what_we_did",""))}'
             f'<details style="margin-top:4px;"><summary style="cursor:pointer;font-size:0.68rem;'
-            f'color:#6366f1;">proof</summary>'
+            f'color:#C05800;">proof</summary>'
             f'<pre style="white-space:pre-wrap;font-size:0.68rem;background:#fff;border:1px solid #fde68a;'
-            f'border-radius:6px;padding:6px 8px;margin:4px 0 0;color:#334155;">'
+            f'border-radius:6px;padding:6px 8px;margin:4px 0 0;color:#4A3623;">'
             f'{_esc_full(_json.dumps(pr, indent=2, default=str))}</pre></details></div></div>')
 
     # Remediation timeline
@@ -591,11 +597,11 @@ def _validation_html(validation: dict, remediation_log: list) -> str:
         for entry in remediation_log:
             acts = "; ".join(f'{a.get("action")}({a.get("target") or ""})→{a.get("outcome")}'
                              for a in entry.get("actions", []))
-            items += (f'<div style="font-size:0.76rem;color:#334155;padding:3px 0;">'
+            items += (f'<div style="font-size:0.76rem;color:#4A3623;padding:3px 0;">'
                       f'<b>Round {entry.get("round")}:</b> fixing {_esc_full(", ".join(entry.get("issues") or []))} '
                       f'→ {_esc_full(acts)}</div>')
-        rem_html = (f'<div style="margin-top:9px;border-top:1px dashed #e2e8f0;padding-top:7px;">'
-                    f'<div style="font-weight:800;font-size:0.72rem;color:#475569;margin-bottom:3px;">'
+        rem_html = (f'<div style="margin-top:9px;border-top:1px dashed #EADFCB;padding-top:7px;">'
+                    f'<div style="font-weight:800;font-size:0.72rem;color:#6B5338;margin-bottom:3px;">'
                     f'🔁 Remediation timeline ({len(remediation_log)} round(s))</div>{items}</div>')
 
     return head + rows + fix_html + notes_html + rem_html
@@ -604,7 +610,7 @@ def _validation_html(validation: dict, remediation_log: list) -> str:
 def render_validation_panel(slot, validation, remediation_log, live: bool = False) -> None:
     inner = _validation_html(validation or {}, remediation_log or [])
     slot.markdown(
-        f'<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;'
+        f'<div style="background:#fff;border:1.5px solid #EADFCB;border-radius:14px;'
         f'padding:14px 16px;margin-top:6px;">{inner}</div>', unsafe_allow_html=True)
 
 
@@ -622,14 +628,14 @@ def _agent_strip_html(browser_runs: list) -> str:
         sc = "#dc2626" if stuck else "#d97706"
         sl = "✗ stuck" if stuck else "◷ working"
         step = _esc(last.get("goal") or last.get("action", ""), 48)
-        chips += (f'<div style="flex:1 1 220px;min-width:200px;border:1px solid #e2e8f0;'
+        chips += (f'<div style="flex:1 1 220px;min-width:200px;border:1px solid #EADFCB;'
                   f'border-radius:10px;padding:8px 12px;background:#fff;">'
                   f'<div style="display:flex;justify-content:space-between;align-items:center;">'
-                  f'<b style="font-size:0.85rem;color:#0f172a;">{_esc(r.get("platform_name",""),24)}</b>'
+                  f'<b style="font-size:0.85rem;color:#2A1A0A;">{_esc(r.get("platform_name",""),24)}</b>'
                   f'<span style="color:{sc};font-weight:700;font-size:0.75rem;">{sl}</span></div>'
-                  f'<div style="font-size:0.8rem;color:#475569;margin-top:4px;white-space:nowrap;'
+                  f'<div style="font-size:0.8rem;color:#6B5338;margin-top:4px;white-space:nowrap;'
                   f'overflow:hidden;text-overflow:ellipsis;">'
-                  f'<span style="color:#6366f1;font-weight:700;">{last.get("n","")}›</span> {step}</div></div>')
+                  f'<span style="color:#C05800;font-weight:700;">{last.get("n","")}›</span> {step}</div></div>')
     if not chips:
         chips = '<div style="font-size:0.85rem;color:#16a34a;">Reading results…</div>'
     return (f'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">{chips}</div>')
@@ -644,7 +650,7 @@ def _render_stage(slot, shot, browser_runs) -> None:
         return
     with slot.container():
         st.markdown(
-            f'<div style="font-size:0.95rem;font-weight:600;color:#0f172a;margin:6px 0 8px;">'
+            f'<div style="font-size:0.95rem;font-weight:600;color:#2A1A0A;margin:6px 0 8px;">'
             f'🖥 Live browser — controlling <b>{_esc(name,30)}</b> '
             f'<span style="color:#22c55e;">● live</span></div>',
             unsafe_allow_html=True)
@@ -1082,7 +1088,7 @@ def render_result_row(r: dict, idx: int, platform_website: str = "",
     btn_label   = (f"View on {platform_name}" if is_direct
                    else f"Search on {platform_name}" if platform_name
                    else "Visit →")
-    price_html  = f'<span class="rrow-price">₹{price}<span style="font-size:0.65rem;font-weight:500;color:#64748b;">{plabel}</span></span>' if price else ""
+    price_html  = f'<span class="rrow-price">₹{price}<span style="font-size:0.65rem;font-weight:500;color:#9A7E58;">{plabel}</span></span>' if price else ""
     type_html   = f'<span class="rrow-type">{btype}</span>' if btype else ""
     view_html   = f'<a class="rrow-view" href="{link_target}" target="_blank">{btn_label} →</a>' if link_target else ""
     st.markdown(
@@ -1267,8 +1273,8 @@ def render_best_pick_banner(rec: dict, ranked: list, intent_type: str = "general
     # Don't render if no real winner found
     if not pid or pid.lower() in ("", "none", "null"):
         st.markdown("""
-        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;
-             padding:1.2rem 1.4rem;color:#64748b;font-size:0.85rem;text-align:center;">
+        <div style="background:#F7F1E4;border:1.5px solid #EADFCB;border-radius:14px;
+             padding:1.2rem 1.4rem;color:#9A7E58;font-size:0.85rem;text-align:center;">
           No recommendation available — platforms returned no comparable results.
         </div>""", unsafe_allow_html=True)
         return
@@ -1293,21 +1299,21 @@ def render_best_pick_banner(rec: dict, ranked: list, intent_type: str = "general
     conf_cls  = {"high":"conf-high","medium":"conf-medium","low":"conf-low"}.get(confidence,"conf-medium")
     book_label = "Book Now" if is_direct else "Search & Book"
     book_html = f'<a class="bp-book" href="{url}" target="_blank">{book_label} →</a>' if url.startswith("http") else ""
-    tips_html = f'<div style="font-size:0.78rem;color:#475569;margin-top:0.5rem;">💡 {tips}</div>' if tips else ""
+    tips_html = f'<div style="font-size:0.78rem;color:#6B5338;margin-top:0.5rem;">💡 {tips}</div>' if tips else ""
 
     # Build alts as separate lines — avoid nesting complex HTML in f-string
     alts_lines = ""
     for a in (alts or [])[:2]:
         ap = str(a.get("platform","")).replace("<","&lt;")
         aw = str(a.get("why","")).replace("<","&lt;")
-        alts_lines += f'<div style="font-size:0.76rem;color:#475569;padding:3px 0;"><span style="color:#64748b;font-weight:600;">{ap}</span> — {aw}</div>'
+        alts_lines += f'<div style="font-size:0.76rem;color:#6B5338;padding:3px 0;"><span style="color:#9A7E58;font-weight:600;">{ap}</span> — {aw}</div>'
 
     alts_html = ""
     if alts_lines:
         alts_html = (
-            '<div style="margin-top:0.75rem;border-top:1px solid #0f172a;padding-top:0.75rem;">'
+            '<div style="margin-top:0.75rem;border-top:1px solid #2A1A0A;padding-top:0.75rem;">'
             '<div style="font-size:0.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;'
-            'color:#334155;margin-bottom:4px;">Also consider</div>'
+            'color:#4A3623;margin-bottom:4px;">Also consider</div>'
             + alts_lines + "</div>"
         )
 
@@ -1326,7 +1332,7 @@ def render_best_pick_banner(rec: dict, ranked: list, intent_type: str = "general
             f'<div class="bp-price">{"₹"+price if price else "—"}</div>'
             f'<div><span class="bp-conf {conf_cls}">{confidence} confidence</span></div>'
             f'<div style="margin-top:0.75rem;">{book_html}</div>'
-            f'<div style="font-size:0.72rem;color:#334155;margin-top:0.5rem;max-width:180px;">{price_note}</div>'
+            f'<div style="font-size:0.72rem;color:#4A3623;margin-top:0.5rem;max-width:180px;">{price_note}</div>'
           '</div>'
         '</div>',
         unsafe_allow_html=True,
@@ -1470,7 +1476,7 @@ def render_roadblocks(platform_results: dict, intent_type: str, intent_params: d
         with st.container(border=True):
             st.markdown(f"**{icon} {name}**")
             st.markdown(
-                f'<div style="font-size:0.82rem;color:#475569;">{rb.get("reason","")}</div>'
+                f'<div style="font-size:0.82rem;color:#6B5338;">{rb.get("reason","")}</div>'
                 f'<div style="font-size:0.8rem;color:#0f766e;margin-top:4px;">💡 {rb.get("suggestion","")}</div>',
                 unsafe_allow_html=True,
             )
@@ -1488,10 +1494,10 @@ def render_roadblocks(platform_results: dict, intent_type: str, intent_params: d
             analysis = rb.get("analysis") or {}
             if analysis:
                 st.markdown(
-                    f'<div style="font-size:0.76rem;background:#eef2ff;border:1px solid #c7d2fe;'
+                    f'<div style="font-size:0.76rem;background:#FBEEDD;border:1px solid #EAD3AC;'
                     f'border-radius:8px;padding:8px 10px;margin-top:6px;color:#3730a3;">'
-                    f'<b>🩺 Monitor agent</b> · <span style="color:#6366f1;">{analysis.get("category","")}</span><br>'
-                    f'<span style="color:#4338ca;">{str(analysis.get("diagnosis","")).replace("<","&lt;")}</span></div>',
+                    f'<b>🩺 Monitor agent</b> · <span style="color:#C05800;">{analysis.get("category","")}</span><br>'
+                    f'<span style="color:#9A3B00;">{str(analysis.get("diagnosis","")).replace("<","&lt;")}</span></div>',
                     unsafe_allow_html=True,
                 )
             if rec:
@@ -1592,10 +1598,10 @@ def render_diagnostics(diagnostics: dict):
                 pct = int(100 * n["seconds"] / mx)
                 st.markdown(
                     f'<div style="display:flex;align-items:center;gap:8px;font-size:0.78rem;margin:2px 0;">'
-                    f'<span style="width:130px;color:#475569;">{n["name"]}</span>'
-                    f'<span style="flex:1;background:#eef2f7;border-radius:6px;overflow:hidden;height:14px;">'
-                    f'<span style="display:block;height:100%;width:{pct}%;background:#6366f1;"></span></span>'
-                    f'<span style="width:54px;text-align:right;color:#0f172a;">{n["seconds"]}s</span>'
+                    f'<span style="width:130px;color:#6B5338;">{n["name"]}</span>'
+                    f'<span style="flex:1;background:#F1E8D8;border-radius:6px;overflow:hidden;height:14px;">'
+                    f'<span style="display:block;height:100%;width:{pct}%;background:#C05800;"></span></span>'
+                    f'<span style="width:54px;text-align:right;color:#2A1A0A;">{n["seconds"]}s</span>'
                     f'</div>', unsafe_allow_html=True,
                 )
 
@@ -1615,13 +1621,13 @@ def render_diagnostics(diagnostics: dict):
                 rows += (
                     f'<tr><td style="padding:3px 8px;">{p.get("platform_name")}</td>'
                     f'<td style="padding:3px 8px;">{status}</td>'
-                    f'<td style="padding:3px 8px;color:#475569;">{tier}</td>'
+                    f'<td style="padding:3px 8px;color:#6B5338;">{tier}</td>'
                     f'<td style="padding:3px 8px;text-align:right;">{p.get("elapsed")}s</td>'
-                    f'<td style="padding:3px 8px;color:#64748b;font-size:0.72rem;">{legs}</td></tr>'
+                    f'<td style="padding:3px 8px;color:#9A7E58;font-size:0.72rem;">{legs}</td></tr>'
                 )
             st.markdown(
                 '<table style="width:100%;font-size:0.78rem;border-collapse:collapse;">'
-                '<thead><tr style="text-align:left;color:#64748b;font-size:0.7rem;">'
+                '<thead><tr style="text-align:left;color:#9A7E58;font-size:0.7rem;">'
                 '<th style="padding:3px 8px;">Platform</th><th style="padding:3px 8px;">Results</th>'
                 '<th style="padding:3px 8px;">Tier used</th><th style="padding:3px 8px;text-align:right;">Time</th>'
                 '<th style="padding:3px 8px;">Legs tried</th></tr></thead>'
@@ -1657,6 +1663,20 @@ def _reset_search_state():
 
 def main():
 
+    # ── Landing page ──
+    # First visit shows the animated homepage (frontend/landing.py). "Launch app"
+    # links reload the top window with ?app=1, which flips us into the search UI
+    # for the rest of the session.
+    if "home" in st.query_params:          # topbar "Home" → back to landing
+        st.session_state.pop("_entered_app", None)
+        st.query_params.clear()
+    if "app" in st.query_params:
+        st.session_state["_entered_app"] = True
+    if not st.session_state.get("_entered_app"):
+        from frontend.landing import render_landing
+        render_landing()
+        st.stop()
+
     # ── Access gate ──
     # Require Google (Gmail) sign-in before anything else renders. Returns the
     # signed-in user (or {} when auth isn't configured yet / open mode). If the
@@ -1664,29 +1684,71 @@ def main():
     # halts here, so nothing below runs for an anonymous user.
     user = require_login()
 
-    # ── Topbar ──
-    topbar_col, user_col = st.columns([6, 1])
-    with topbar_col:
+    # ═══ SIDEBAR — navigation, recents, workspace tools (Claude-app-style shell) ═══
+    with st.sidebar:
         st.markdown("""
-        <div class="topbar">
-          <div class="topbar-logo"><div class="topbar-logo-dot"></div> Agent-Aware</div>
-        </div>
+        <div class="sb-logo"><span class="sb-dot"></span> Agent‑Aware</div>
+        <a class="sb-home" href="/?home=1" target="_self">← Back to homepage</a>
         """, unsafe_allow_html=True)
-    with user_col:
+
+        if st.button("＋  New search", key="sb_new", use_container_width=True):
+            try:
+                from backend.progress import request_cancel
+                request_cancel()
+            except Exception:
+                pass
+            _reset_search_state()
+            st.rerun()
+
+        # Recent searches — this session's history, newest first, click to re-run
+        st.markdown('<div class="sb-cap">Recents</div>', unsafe_allow_html=True)
+        recents = st.session_state.get("_recent_searches", [])
+        if not recents:
+            st.markdown('<div class="sb-empty">Your searches will appear here.</div>',
+                        unsafe_allow_html=True)
+        for i, rq in enumerate(recents[:8]):
+            if st.button(f"🕘 {rq[:34]}{'…' if len(rq) > 34 else ''}",
+                         key=f"sb_recent_{i}", use_container_width=True):
+                _reset_search_state()
+                st.session_state["active_query"] = rq
+                st.session_state["_run_search_now"] = True
+                st.rerun()
+
+        # Quick starts
+        st.markdown('<div class="sb-cap">Try one</div>', unsafe_allow_html=True)
+        examples = ["✈ Flights Mumbai → Delhi", "🏨 Hotels in Manali", "🎬 Coldplay India 2025",
+                    "🍕 Pizza near Bangalore", "📱 iPhone 15 price", "🚂 Delhi–Agra trains"]
+        for i, ex in enumerate(examples):
+            if st.button(ex, key=f"chip_{i}", use_container_width=True):
+                _reset_search_state()
+                st.session_state["active_query"] = ex.split(" ", 1)[1].strip()
+                st.session_state["_run_search_now"] = True
+                st.rerun()
+
+        # Workspace extras live down here, out of the main flow
+        st.markdown('<div class="sb-cap">Workspace</div>', unsafe_allow_html=True)
+        render_slack_panel()
         render_user_chip(user)
 
-    # ── Slack channels (read-only) — collapsible, shows only when configured ──
-    render_slack_panel()
-
-    # ── Search hero ──
+    # ── Slim topbar ──
     st.markdown("""
-    <div class="search-section">
-      <h1 class="search-headline">Search everything, everywhere.</h1>
-      <p class="search-sub">AI searches across platforms simultaneously and picks the best for you.</p>
+    <div class="topbar">
+      <div class="topbar-logo"><div class="topbar-logo-dot"></div> Agent-Aware</div>
+      <span class="topbar-badge">multi-agent search</span>
     </div>
     """, unsafe_allow_html=True)
 
-    # Search input + button — wrapped in form so Enter key submits
+    data_exists = bool(st.session_state.get("last_result"))
+
+    # ── Composer — hero-sized on the empty page, compact once results exist ──
+    if not data_exists:
+        st.markdown("""
+        <div class="search-section">
+          <h1 class="search-headline">Where should the agents look?</h1>
+          <p class="search-sub">One question — flights, hotels, gadgets, gigs — searched everywhere at once.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     with st.form(key="search_form", clear_on_submit=False, border=False):
         q_col, btn_col = st.columns([5, 1])
         with q_col:
@@ -1702,76 +1764,16 @@ def main():
             search_clicked = st.form_submit_button("Search →", type="primary")
             st.markdown("</div>", unsafe_allow_html=True)
 
-    # Example chips
-    examples = ["✈ Flights Mumbai → Delhi", "🏨 Hotels in Manali", "🎬 Coldplay India 2025",
-                "🍕 Pizza near Bangalore", "📱 iPhone 15 price", "🚂 Delhi–Agra trains"]
-    chip_cols = st.columns(len(examples))
-    for i, ex in enumerate(examples):
-        with chip_cols[i]:
-            if st.button(ex, key=f"chip_{i}", use_container_width=True):
-                _reset_search_state()
-                st.session_state["active_query"] = ex.split(" ",1)[1].strip()
-                st.session_state["_run_search_now"] = True
-                st.rerun()
-
-    # ── New Search / Stop — clears the cached result + chat so a fresh search starts
-    # cleanly (fixes "the cache won't let me start a new search"), and signals any
-    # in-flight worker to cancel. ──
-    if st.session_state.get("last_result") or st.session_state.get("active_query"):
-        if st.button("⟲  New search (clear & stop)", key="reset_search"):
-            try:
-                from backend.progress import request_cancel
-                request_cancel()
-            except Exception:
-                pass
-            _reset_search_state()
-            st.rerun()
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
-    # ── Always-on engine panels: eval checklist  +  live browser-use ──
-    # Two side-by-side boxes, present every render. They stream in real time during
-    # a search (checklist fills stage by stage; the browser panel shows each step +
-    # the exact error on a roadblock) and stay showing the last run afterward. The
-    # slots are created here so the live polling loop can stream into them.
-    _ep_left, _ep_right = st.columns(2)
-    _eval_slot = _ep_left.empty()
-    _browser_slot = _ep_right.empty()
-    _last = st.session_state.get("last_result") or {}
-    render_engine_panels(_eval_slot, _browser_slot,
-                         _last.get("diagnostics"), _last.get("browser_runs"), live=False,
-                         events=st.session_state.get("_last_events"))
-
-    # ── Agent Communication — full-width feed of the actual messages agents send
-    # each other (LLM requests + the plan, dispatches, results, diagnoses). Streams
-    # live during a search and stays showing the last run afterward. ──
-    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-    _comms_slot = st.empty()
-    render_agent_comms(_comms_slot, _last.get("agent_comms"), live=False)
-
-    # ── Validation & remediation — the autonomous critic's verdict, fixes and proof ──
-    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
-    _valid_slot = st.empty()
-    render_validation_panel(_valid_slot, _last.get("validation"), _last.get("remediation_log"))
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-
     # ── Trigger ──
-    # active_query is set programmatically (chips, clarification answers)
+    # active_query is set programmatically (sidebar chips, clarification answers)
     # search_query is owned by the widget — never write to it directly
     widget_query = st.session_state.get("search_query", "").strip()
-
-    # Fire on button click OR when active_query was just set by a chip/clarification
     just_set = st.session_state.pop("_run_search_now", False)
-
-    # Pick the query to run/display:
-    #  • programmatic trigger (chip / clarification) → active_query holds the new query
-    #  • manual click or passive rerun → the SEARCH BOX is the source of truth, so a
-    #    freshly-typed query isn't shadowed by the previous run's lingering active_query.
     if just_set:
         active = (st.session_state.get("active_query", "") or widget_query).strip()
     else:
         active = widget_query or st.session_state.get("active_query", "").strip()
+
     if (search_clicked or just_set) and active:
         # A search triggered by the chat ("show only non-stop", etc.) keeps the
         # conversation going — only a brand-new typed/clicked search wipes the chat.
@@ -1780,16 +1782,28 @@ def main():
         if not chat_refine:
             st.session_state.pop("chat_history", None)
             st.session_state.pop("_chat_seeded_run", None)
+
+        # ── LIVE RUN VIEW — full-width mission control while agents work.
+        # Engine checklist + live browser side by side, comms feed streaming below.
+        # Once the run finishes we st.rerun() so the page reflows into the
+        # organized answer + tabs layout.
+        st.markdown('<div class="live-cap">⚡ Agents working — live</div>',
+                    unsafe_allow_html=True)
+        _ep_left, _ep_right = st.columns(2)
+        _eval_slot = _ep_left.empty()
+        _browser_slot = _ep_right.empty()
+        _comms_slot = st.empty()
+
         st.session_state["last_result"] = run_search_live(active, _eval_slot, _browser_slot, _comms_slot)
         st.session_state["active_query"] = active
         st.session_state["_search_run_id"] = st.session_state.get("_search_run_id", 0) + 1
-        # Refresh the panels with the finished run's final checklist + browser steps.
-        _fin = st.session_state["last_result"] or {}
-        render_engine_panels(_eval_slot, _browser_slot,
-                             _fin.get("diagnostics"), _fin.get("browser_runs"), live=False,
-                             events=st.session_state.get("_last_events"))
-        render_agent_comms(_comms_slot, _fin.get("agent_comms"), live=False)
-        render_validation_panel(_valid_slot, _fin.get("validation"), _fin.get("remediation_log"))
+        # Session history for the sidebar (dedup, newest first)
+        rec = st.session_state.setdefault("_recent_searches", [])
+        if active in rec:
+            rec.remove(active)
+        rec.insert(0, active)
+        del rec[12:]
+        st.rerun()
 
     # ── Results ──
     data = st.session_state.get("last_result")
@@ -1810,16 +1824,16 @@ def main():
             # instead of dumping the raw JSON error body from the API.
             wait_match = _re.search(r"try again in ([0-9hms.]+)", raw_err)
             wait_for = wait_match.group(1) if wait_match else "a few minutes"
-            st.markdown(f"""<div style="background:#1a1306;border:1px solid rgba(245,158,11,0.25);
-              border-radius:12px;padding:1.1rem 1.3rem;color:#fbbf24;font-size:0.9rem;line-height:1.5;">
+            st.markdown(f"""<div style="background:#FFF7E6;border:1.5px solid #fcd34d;
+              border-radius:12px;padding:1.1rem 1.3rem;color:#92400e;font-size:0.9rem;line-height:1.5;">
               ⏳ <b>We've hit today's AI usage limit.</b><br/>
-              <span style="color:#fcd34d;font-size:0.85rem;">
+              <span style="color:#b45309;font-size:0.85rem;">
               Our search assistant has used up its daily quota of AI requests. It refills on its own —
               try again in about <b>{wait_for}</b>.
               </span></div>""", unsafe_allow_html=True)
         else:
-            st.markdown(f"""<div style="background:#0f0a0a;border:1px solid rgba(239,68,68,0.2);
-              border-radius:12px;padding:1rem 1.2rem;color:#f87171;font-size:0.85rem;">
+            st.markdown(f"""<div style="background:#FEF2F2;border:1.5px solid #fca5a5;
+              border-radius:12px;padding:1rem 1.2rem;color:#b91c1c;font-size:0.85rem;">
               ⚠ Something went wrong while searching. Please try again in a moment.</div>""",
               unsafe_allow_html=True)
         return
@@ -1887,9 +1901,10 @@ def main():
                 )
             with cl_btn:
                 if st.button("Continue →", key="clarify_submit") and clarify_answer:
-                    full_query = f"{active} — {clarify_answer}"
-                    st.session_state["last_result"] = run_search_live(full_query, _eval_slot, _browser_slot)
-                    st.session_state["active_query"] = full_query
+                    # Route through the live-run branch so the user gets the full
+                    # mission-control view for the follow-up search too.
+                    st.session_state["active_query"] = f"{active} — {clarify_answer}"
+                    st.session_state["_run_search_now"] = True
                     st.rerun()
             return
 
@@ -1935,50 +1950,134 @@ def main():
     if recommendation:
         render_best_pick_banner(recommendation, ranked, intent_type, intent_params)
 
-    # Explain how like-for-like comparison is anchored (above the comparison views).
-    compare_type = comparison.get("compare_type", "")
-    if compare_type:
-        unmatched = [p["platform_name"] for p in ranked if not p.get("type_matched", True)]
-        warn_html = (f'<span class="compare-note-warn">No {compare_type} on '
-                     f'{", ".join(unmatched)} — showing the closest alternative.</span>'
-                     if unmatched else "")
-        st.markdown(
-            f'<div class="compare-note">⚖️ Comparing <b>{compare_type}</b> like-for-like '
-            f'across every platform.{warn_html}</div>',
-            unsafe_allow_html=True,
-        )
+    # ═══ ORGANIZED DETAIL — everything below the headline answer lives in tabs,
+    # one surface per concern: results, AI insights, the agent conversation,
+    # the engine internals, the critic's audit, and the knowledge graph. ═══
+    # Graph indexing happens up front so the Graph tab reflects this run.
+    _graph_on = False
+    try:
+        from backend import graph_chat as _gc
+        _graph_on = _gc.available()
+        _run = st.session_state.get("_search_run_id", 0)
+        if _graph_on and st.session_state.get("_graph_indexed_run") != _run:
+            _gc.index_search(active, platform_results)
+            st.session_state["_graph_indexed_run"] = _run
+    except Exception:
+        _graph_on = False
 
-    # ── 3. AI insights + structured side-by-side matrix ──
-    if insights.get("available"):
-        render_insights(insights)
+    tab_results, tab_insights, tab_agents, tab_engine, tab_valid, tab_graph = st.tabs([
+        "🏷 Results", "🧠 AI insights", "🛰 Agent comms",
+        "🖥 Engine room", "🛡 Validation", "🔗 Graph",
+    ])
 
-    # ── 4. Browse by type (segmented comparison) ──
-    segments = data.get("segments") or {}
-    if segments.get("available"):
-        render_segments(segments, intent_type, intent_params)
+    with tab_results:
+        compare_type = comparison.get("compare_type", "")
+        if compare_type:
+            unmatched = [p["platform_name"] for p in ranked if not p.get("type_matched", True)]
+            warn_html = (f'<span class="compare-note-warn">No {compare_type} on '
+                         f'{", ".join(unmatched)} — showing the closest alternative.</span>'
+                         if unmatched else "")
+            st.markdown(
+                f'<div class="compare-note">⚖️ Comparing <b>{compare_type}</b> like-for-like '
+                f'across every platform.{warn_html}</div>',
+                unsafe_allow_html=True,
+            )
 
-    # ── 5. All results — progressive disclosure: the full per-platform browse is
-    #       secondary detail, tucked into an expander so the page stays calm. ──
-    pids = list(platform_results.keys())
-    total_n = comparison.get("total_results", 0)
-    with st.expander(f"Browse all {total_n} results across {len(pids)} platforms", expanded=False):
-        cols = st.columns(len(pids))
-        for col, pid in zip(cols, pids):
-            deep_url = _build_deep_link(pid, intent_params) or _PLATFORM_WEBSITES.get(pid, "")
-            with col:
-                render_platform_card(
-                    pid, platform_results[pid],
-                    is_winner=(pid == winner_id),
-                    platform_website=deep_url,
-                    intent_type=intent_type,
-                    badges=badges_map.get(pid, []),
-                    value_score=scores_map.get(pid),
+        segments = data.get("segments") or {}
+        if segments.get("available"):
+            render_segments(segments, intent_type, intent_params)
+
+        pids = list(platform_results.keys())
+        total_n = comparison.get("total_results", 0)
+        with st.expander(f"Browse all {total_n} results across {len(pids)} platforms", expanded=False):
+            cols = st.columns(len(pids))
+            for col, pid in zip(cols, pids):
+                deep_url = _build_deep_link(pid, intent_params) or _PLATFORM_WEBSITES.get(pid, "")
+                with col:
+                    render_platform_card(
+                        pid, platform_results[pid],
+                        is_winner=(pid == winner_id),
+                        platform_website=deep_url,
+                        intent_type=intent_type,
+                        badges=badges_map.get(pid, []),
+                        value_score=scores_map.get(pid),
+                    )
+
+    with tab_insights:
+        if insights.get("available"):
+            render_insights(insights)
+        else:
+            st.markdown('<div class="rrow-empty" style="padding:2rem;">No AI insights for this run.</div>',
+                        unsafe_allow_html=True)
+
+    with tab_agents:
+        # The full inter-agent conversation from this run, on its animated shell.
+        render_agent_comms(st.empty(), data.get("agent_comms"), live=False)
+
+    with tab_engine:
+        _ep_left, _ep_right = st.columns(2)
+        render_engine_panels(_ep_left.empty(), _ep_right.empty(),
+                             data.get("diagnostics"), data.get("browser_runs"), live=False,
+                             events=st.session_state.get("_last_events"))
+        render_diagnostics(data.get("diagnostics"))
+
+    with tab_valid:
+        render_validation_panel(st.empty(), data.get("validation"), data.get("remediation_log"))
+
+    with tab_graph:
+        if not _graph_on:
+            st.markdown('<div class="rrow-empty" style="padding:2rem;">Neo4j isn\'t running — '
+                        'start it to query results as a graph. (See NEO4J setup docs.)</div>',
+                        unsafe_allow_html=True)
+        else:
+            # ── Direct graph query — write your own Cypher, no LLM involved ──
+            with st.expander("🔗 Query the graph directly (raw Cypher)", expanded=True):
+                st.markdown(
+                    "<div style='font-size:0.78rem;color:#9A7E58;margin-bottom:0.4rem;'>"
+                    "Schema: <code>(:CurSearch {query})-[:RESULT]->(:CurResult "
+                    "{name, price, stops, airline, cabin, duration, rating, platform, url})</code>"
+                    "<br>Read-only — write/delete clauses are blocked.</div>",
+                    unsafe_allow_html=True,
                 )
+                cy_default = "MATCH (r:CurResult) RETURN r.name AS flight, r.price AS price, r.stops AS stops ORDER BY r.price ASC"
+                cy_text = st.text_area("Cypher", value=cy_default, height=90,
+                                       key="_direct_cypher", label_visibility="collapsed")
+                if st.button("▶ Run query", key="_run_cypher"):
+                    res = _gc.run_cypher(cy_text)
+                    if res["ok"]:
+                        if res["rows"]:
+                            st.dataframe(_flatten_rows(res["rows"]), use_container_width=True, hide_index=True)
+                            st.caption(f"{len(res['rows'])} row(s) · columns: {', '.join(res['columns'])}")
+                        else:
+                            st.info("Query ran fine — 0 rows.")
+                    else:
+                        st.error(res["error"])
 
-    # ── 5b. Performance & diagnostics — where did the time go? ──
-    render_diagnostics(data.get("diagnostics"))
+            # ── Ask in plain English — watch the LLM WRITE the Cypher, then run it ──
+            with st.expander("🧠 Ask in plain English (LLM writes the Cypher)"):
+                st.markdown(
+                    "<div style='font-size:0.78rem;color:#9A7E58;margin-bottom:0.4rem;'>"
+                    "Type a question about your current results. The LLM translates it into "
+                    "Cypher — shown below before running — then Neo4j answers it exactly.</div>",
+                    unsafe_allow_html=True,
+                )
+                nl_q = st.text_input("Question", placeholder="e.g. top 3 cheapest flights, which airline appears most",
+                                     key="_nl_question", label_visibility="collapsed")
+                if st.button("✨ Generate & run", key="_run_nl") and nl_q.strip():
+                    with st.spinner("LLM is writing the Cypher…"):
+                        res = _gc.ask_llm(nl_q)
+                    if res["cypher"]:
+                        st.code(res["cypher"], language="cypher")
+                    if res["ok"]:
+                        if res["rows"]:
+                            st.dataframe(_flatten_rows(res["rows"]), use_container_width=True, hide_index=True)
+                            st.caption(f"{len(res['rows'])} row(s)")
+                        else:
+                            st.info("Query ran fine — 0 rows.")
+                    else:
+                        st.error(res["error"])
 
-    # ── 6. Persistent Chat ──
+    # ── Persistent Chat ──
     st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
     # Seed/update the assistant's summary message once per search run. A run id
@@ -2013,10 +2112,10 @@ def main():
 
     # Chat container
     st.markdown("""
-    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;
+    <div style="background:#fff;border:1.5px solid #EADFCB;border-radius:16px;
          padding:1.2rem 1.4rem 0.5rem;margin-top:0.5rem;">
       <div style="font-size:0.68rem;font-weight:700;letter-spacing:.08em;
-           text-transform:uppercase;color:#64748b;margin-bottom:1rem;">
+           text-transform:uppercase;color:#9A7E58;margin-bottom:1rem;">
         💬 Chat with your results
       </div>
     """, unsafe_allow_html=True)
@@ -2029,68 +2128,6 @@ def main():
             st.markdown(msg["content"])
 
     st.markdown("</div>", unsafe_allow_html=True)
-
-    # Index the current results into Neo4j once per search → powers graph follow-ups
-    # AND direct queries below. No-op (and silent) if Neo4j isn't configured/running,
-    # so the app is unaffected.
-    _graph_on = False
-    try:
-        from backend import graph_chat as _gc
-        _graph_on = _gc.available()
-        _run = st.session_state.get("_search_run_id", 0)
-        if _graph_on and st.session_state.get("_graph_indexed_run") != _run:
-            _gc.index_search(active, platform_results)
-            st.session_state["_graph_indexed_run"] = _run
-    except Exception:
-        _graph_on = False
-
-    # ── Direct graph query — write your own Cypher, no LLM involved ──
-    if _graph_on:
-        with st.expander("🔗 Query the graph directly (raw Cypher)"):
-            st.markdown(
-                "<div style='font-size:0.78rem;color:#64748b;margin-bottom:0.4rem;'>"
-                "Schema: <code>(:CurSearch {query})-[:RESULT]->(:CurResult "
-                "{name, price, stops, airline, cabin, duration, rating, platform, url})</code>"
-                "<br>Read-only — write/delete clauses are blocked.</div>",
-                unsafe_allow_html=True,
-            )
-            cy_default = "MATCH (r:CurResult) RETURN r.name AS flight, r.price AS price, r.stops AS stops ORDER BY r.price ASC"
-            cy_text = st.text_area("Cypher", value=cy_default, height=90,
-                                   key="_direct_cypher", label_visibility="collapsed")
-            if st.button("▶ Run query", key="_run_cypher"):
-                res = _gc.run_cypher(cy_text)
-                if res["ok"]:
-                    if res["rows"]:
-                        st.dataframe(_flatten_rows(res["rows"]), use_container_width=True, hide_index=True)
-                        st.caption(f"{len(res['rows'])} row(s) · columns: {', '.join(res['columns'])}")
-                    else:
-                        st.info("Query ran fine — 0 rows.")
-                else:
-                    st.error(res["error"])
-
-        # ── Ask in plain English — watch the LLM WRITE the Cypher, then run it ──
-        with st.expander("🧠 Ask in plain English (LLM writes the Cypher)"):
-            st.markdown(
-                "<div style='font-size:0.78rem;color:#64748b;margin-bottom:0.4rem;'>"
-                "Type a question about your current results. The LLM translates it into "
-                "Cypher — shown below before running — then Neo4j answers it exactly.</div>",
-                unsafe_allow_html=True,
-            )
-            nl_q = st.text_input("Question", placeholder="e.g. top 3 cheapest flights, which airline appears most",
-                                 key="_nl_question", label_visibility="collapsed")
-            if st.button("✨ Generate & run", key="_run_nl") and nl_q.strip():
-                with st.spinner("LLM is writing the Cypher…"):
-                    res = _gc.ask_llm(nl_q)
-                if res["cypher"]:
-                    st.code(res["cypher"], language="cypher")
-                if res["ok"]:
-                    if res["rows"]:
-                        st.dataframe(_flatten_rows(res["rows"]), use_container_width=True, hide_index=True)
-                        st.caption(f"{len(res['rows'])} row(s)")
-                    else:
-                        st.info("Query ran fine — 0 rows.")
-                else:
-                    st.error(res["error"])
 
     if follow := st.chat_input("Ask a follow-up… e.g. 'show only non-stop', 'cheapest under 9000'"):
         st.session_state.setdefault("chat_history", []).append(

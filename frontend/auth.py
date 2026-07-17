@@ -63,12 +63,15 @@ def _render_login_screen():
     """Full-screen sign-in gate shown to anonymous visitors."""
     st.markdown("""
     <div style="max-width:440px;margin:8vh auto 0;text-align:center;
-         background:#fff;border:1px solid #e2e8f0;border-radius:18px;
-         padding:2.6rem 2.2rem;box-shadow:0 8px 30px rgba(15,23,42,0.06);">
+         background:#FFFDF6;border:1px solid #EADFCB;border-radius:18px;
+         padding:2.6rem 2.2rem;box-shadow:0 12px 34px rgba(42,26,10,0.08);">
       <div style="font-size:2.2rem;">🔍</div>
-      <h1 style="font-size:1.5rem;font-weight:800;color:#0f172a;margin:0.6rem 0 0.3rem;">
+      <h1 style="font-size:1.5rem;font-weight:800;
+          background:linear-gradient(120deg,#C05800,#FF6A1A 60%,#D98A00);
+          -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+          margin:0.6rem 0 0.3rem;">
         Agent-Aware</h1>
-      <p style="color:#64748b;font-size:0.92rem;line-height:1.5;margin:0 0 1.6rem;">
+      <p style="color:#6B5338;font-size:0.92rem;line-height:1.5;margin:0 0 1.6rem;">
         Sign in with your Google account to search and compare across platforms.
       </p>
     </div>
@@ -79,7 +82,7 @@ def _render_login_screen():
         if st.button("Continue with Google →", type="primary", use_container_width=True):
             st.login()  # redirects to Google's consent screen, then back to the app
         st.markdown(
-            '<p style="text-align:center;color:#94a3b8;font-size:0.72rem;margin-top:0.8rem;">'
+            '<p style="text-align:center;color:#B3996E;font-size:0.72rem;margin-top:0.8rem;">'
             'We only use your Google sign-in to verify who you are. '
             'No emails are read or sent.</p>',
             unsafe_allow_html=True,
@@ -92,8 +95,8 @@ def _render_denied(user: dict):
     <div style="max-width:460px;margin:10vh auto 0;text-align:center;
          background:#fff;border:1px solid #fecaca;border-radius:18px;padding:2.4rem 2rem;">
       <div style="font-size:2rem;">🚫</div>
-      <h2 style="font-size:1.3rem;color:#0f172a;margin:0.5rem 0;">Access not enabled</h2>
-      <p style="color:#64748b;font-size:0.9rem;line-height:1.5;">
+      <h2 style="font-size:1.3rem;color:#2A1A0A;margin:0.5rem 0;">Access not enabled</h2>
+      <p style="color:#6B5338;font-size:0.9rem;line-height:1.5;">
         <b>{user.get('email','')}</b> isn't on the access list for this app yet.
         Ask the owner to add your Gmail address, then sign in again.
       </p>
