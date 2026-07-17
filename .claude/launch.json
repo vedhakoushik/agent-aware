@@ -2,13 +2,6 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "agent-aware",
-      "runtimeExecutable": "C:/Users/bella/agent-aware/.venv/Scripts/python.exe",
-      "runtimeArgs": ["run.py"],
-      "port": 8501,
-      "cwd": "C:/Users/bella/agent-aware"
-    },
-    {
       "name": "agent-aware-api",
       "runtimeExecutable": "C:/Users/bella/agent-aware/.venv/Scripts/python.exe",
       "runtimeArgs": ["-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--port", "8000"],
