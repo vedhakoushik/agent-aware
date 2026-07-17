@@ -1,16 +1,17 @@
 """
-Entry point — starts the Streamlit frontend directly (no separate API server needed).
-The frontend calls the LangGraph backend inline when the API server isn't running.
+Entry point — starts the FastAPI backend that powers the React frontend (web/).
 
 Usage:
-    python run.py               # starts Streamlit UI
-    python run.py --api         # starts FastAPI server only (port 8000)
-    python run.py --both        # starts both (requires two terminals)
+    python run.py               # starts the API server (port 8000)
     python run.py --test        # runs a quick test query in the terminal
+
+Frontend (separate terminal):
+    cd web && npm run dev       # http://localhost:5173
 """
 import os
 import sys
 import subprocess
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -23,23 +24,13 @@ def check_env():
         sys.exit(1)
 
 
-def start_streamlit():
-    check_env()
-    print("🚀 Starting Agent-Aware UI at http://localhost:8501")
-    subprocess.run([
-        sys.executable, "-m", "streamlit", "run",
-        os.path.join(os.path.dirname(__file__), "frontend/app.py"),
-        "--server.port", "8501",
-        "--server.headless", "true",
-    ])
-
-
 def start_api():
     check_env()
     print("🚀 Starting Agent-Aware API at http://localhost:8000")
+    print("   Frontend: cd web && npm run dev  →  http://localhost:5173")
     subprocess.run([
         sys.executable, "-m", "uvicorn", "api.main:app",
-        "--host", "0.0.0.0", "--port", "8000", "--reload",
+        "--host", "0.0.0.0", "--port", "8000",
     ])
 
 
@@ -78,13 +69,7 @@ def run_test():
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
 
-    if mode == "--api":
-        start_api()
-    elif mode == "--test":
+    if mode == "--test":
         run_test()
-    elif mode == "--both":
-        print("Start two terminals:")
-        print("  Terminal 1: python run.py --api")
-        print("  Terminal 2: python run.py")
     else:
-        start_streamlit()
+        start_api()

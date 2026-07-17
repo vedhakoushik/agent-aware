@@ -216,7 +216,7 @@ other's.
 
 ## 6. Frontend (`frontend/app.py`)
 
-Single Streamlit process. Three live panels stream from the backend during a run
+Single FastAPI process + React frontend. Three live panels stream from the backend during a run
 (polled each tick from the in-process trackers above, not pushed):
 - **Progress checklist** — stage-by-stage status (`backend/progress.py` events)
 - **Live browser panel** — full-width screenshot stream (`st.image`, base64 PNG) of

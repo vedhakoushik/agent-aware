@@ -18,45 +18,69 @@ export default function Landing() {
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     const cleanups: (() => void)[] = [];
 
-    /* ── mascot: rotating multi-agent orb, docks bottom-right on scroll ── */
+    /* ─────────────────────────────────────────────────────────────────────
+       THE MASCOT — MetaMask-fox-style: a swarm of agent nodes on a fixed
+       right-side stage that EVOLVES as you scroll. Each section has its own
+       formation and the points morph between them:
+         hero      → SPHERE  (the idea: one system, many agents)
+         pipeline  → HELIX   (the relay race of specialists)
+         features  → GRID    (the engine room)
+         live feed → RING    (agents talking around a table)
+         CTA       → CORE    (everything converges on one answer)
+       ───────────────────────────────────────────────────────────────────── */
     const cv = document.getElementById("mascot") as HTMLCanvasElement | null;
     if (cv) {
       const ctx = cv.getContext("2d")!;
       const AGENTS = ["#C05800", "#FF6A1A", "#D98A00", "#9A3B00", "#713600", "#E8630A"];
       const N = 15;
-      const PTS: { x: number; y: number; z: number; c: string }[] = [];
+      type P3 = { x: number; y: number; z: number };
+
+      const sphere: P3[] = [];
       for (let i = 0; i < N; i++) {
         const y = 1 - (i / (N - 1)) * 2;
         const r = Math.sqrt(1 - y * y);
         const th = i * 2.399963;
-        PTS.push({ x: Math.cos(th) * r, y, z: Math.sin(th) * r, c: AGENTS[i % AGENTS.length] });
+        sphere.push({ x: Math.cos(th) * r, y, z: Math.sin(th) * r });
       }
+      const helix: P3[] = [];
+      for (let i = 0; i < N; i++) {
+        const t = i / (N - 1);
+        const a = t * Math.PI * 3.2;
+        helix.push({ x: Math.cos(a) * 0.62, y: (t - 0.5) * 2.1, z: Math.sin(a) * 0.62 });
+      }
+      const grid: P3[] = [];
+      for (let i = 0; i < N; i++) {
+        const col = i % 5;
+        const row = Math.floor(i / 5);
+        grid.push({ x: (col / 4 - 0.5) * 1.9, y: (row / 2 - 0.5) * 1.25, z: Math.sin(col + row) * 0.18 });
+      }
+      const ring: P3[] = [];
+      for (let i = 0; i < N; i++) {
+        const a = (i / N) * Math.PI * 2;
+        ring.push({ x: Math.cos(a), y: (i % 2 ? 1 : -1) * 0.09, z: Math.sin(a) });
+      }
+      const core: P3[] = sphere.map((p) => ({ x: p.x * 0.24, y: p.y * 0.24, z: p.z * 0.24 }));
+
+      const FORMS = [sphere, helix, grid, ring, core];
+      // link graph from the sphere (stable across morphs, lines stretch as it evolves)
       const LINKS: [number, number][] = [];
       for (let i = 0; i < N; i++)
         for (let j = i + 1; j < N; j++) {
-          const dx = PTS[i].x - PTS[j].x,
-            dy = PTS[i].y - PTS[j].y,
-            dz = PTS[i].z - PTS[j].z;
+          const dx = sphere[i].x - sphere[j].x,
+            dy = sphere[i].y - sphere[j].y,
+            dz = sphere[i].z - sphere[j].z;
           if (dx * dx + dy * dy + dz * dz < 0.9) LINKS.push([i, j]);
         }
-      let W = 0,
-        H = 0,
-        mx = 0,
-        my = 0,
-        scrollY = 0,
-        heroH = 1,
-        raf = 0;
+
+      let W = 0, H = 0, mx = 0, my = 0, sy = 0, raf = 0, maxScroll = 1;
       const size = () => {
         const d = devicePixelRatio || 1;
         W = cv.width = innerWidth * d;
         H = cv.height = innerHeight * d;
         ctx.setTransform(d, 0, 0, d, 0, 0);
-        const hero = rootRef.current?.querySelector(".hero") as HTMLElement | null;
-        heroH = hero ? hero.offsetHeight : innerHeight;
+        maxScroll = Math.max(document.documentElement.scrollHeight - innerHeight, 1);
       };
-      const onScroll = () => {
-        scrollY = window.scrollY;
-      };
+      const onScroll = () => { sy = window.scrollY; };
       const onMouse = (e: MouseEvent) => {
         mx = e.clientX / innerWidth - 0.5;
         my = e.clientY / innerHeight - 0.5;
@@ -65,65 +89,94 @@ export default function Landing() {
       addEventListener("resize", size);
       addEventListener("scroll", onScroll, { passive: true });
       addEventListener("mousemove", onMouse);
+      // A tab hidden at load can report width 0 and suspends rAF — re-size when
+      // it becomes visible so the mascot wakes up with real dimensions.
+      const onVis = () => size();
+      document.addEventListener("visibilitychange", onVis);
       cleanups.push(() => {
         removeEventListener("resize", size);
         removeEventListener("scroll", onScroll);
         removeEventListener("mousemove", onMouse);
+        document.removeEventListener("visibilitychange", onVis);
         cancelAnimationFrame(raf);
       });
-      const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+
       const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-      let ex = 0,
-        ey = 0;
+      const smooth = (t: number) => t * t * (3 - 2 * t);
+      let ex = 0, ey = 0;
+      // morph state eases toward the target so formation changes feel alive
+      const cur: P3[] = sphere.map((p) => ({ ...p }));
+
       const draw = (t: number) => {
-        const w = innerWidth,
-          h = innerHeight;
+        const w = innerWidth, h = innerHeight;
         ctx.clearRect(0, 0, W, H);
-        const p = Math.min(scrollY / Math.max(heroH * 0.85, 1), 1);
-        const e = ease(p);
-        const cx = lerp(w * 0.78, w * 0.9, e);
-        const cy = lerp(h * 0.5, h * 0.85, e);
-        const R = lerp(Math.min(w, h) * 0.17, Math.min(w, h) * 0.072, e);
-        const op = lerp(0.7, 0.96, e);
+
+        // overall progress → which two formations we're between
+        const P = Math.min(sy / maxScroll, 1) * (FORMS.length - 1);
+        const seg = Math.min(Math.floor(P), FORMS.length - 2);
+        const k = smooth(P - seg);
+        const A = FORMS[seg], B = FORMS[seg + 1];
+
+        // centered watermark stage: big, soft, always behind the copy visually
+        // (low alpha keeps text readable while the formation evolves)
+        const cx = w * 0.5;
+        const cy = h * (0.52 + Math.sin(P * 1.7) * 0.03);
+        const R = Math.min(w, h) * (w < 760 ? 0.3 : 0.36);
+        const op = 0.32;
+
         ex += (mx * 0.5 - ex) * 0.06;
         ey += (my * 0.5 - ey) * 0.06;
-        const ry = (reduced ? 0 : scrollY * 0.0022 + t * 0.00018) + ex * 1.4;
-        const rx = 0.35 + ey * 1.1;
-        const ca = Math.cos(ry),
-          sa = Math.sin(ry),
-          cb = Math.cos(rx),
-          sb = Math.sin(rx);
-        const proj = PTS.map((pt) => {
+        const ry = (reduced ? 0 : sy * 0.0016 + t * 0.00016) + ex * 1.3;
+        const rx = 0.32 + ey * 1.0;
+        const ca = Math.cos(ry), sa = Math.sin(ry), cb = Math.cos(rx), sb = Math.sin(rx);
+
+        const proj = cur.map((pt, i) => {
+          // ease each point toward its morph target
+          const tx = lerp(A[i].x, B[i].x, k);
+          const ty = lerp(A[i].y, B[i].y, k);
+          const tz = lerp(A[i].z, B[i].z, k);
+          pt.x += (tx - pt.x) * 0.09;
+          pt.y += (ty - pt.y) * 0.09;
+          pt.z += (tz - pt.z) * 0.09;
+
           const x = pt.x * ca + pt.z * sa;
           const z = -pt.x * sa + pt.z * ca;
           const y2 = pt.y * cb - z * sb;
           const z2 = pt.y * sb + z * cb;
-          const persp = 1.9 / (1.9 - z2);
-          return { sx: cx + x * R * persp, sy: cy + y2 * R * persp, depth: (z2 + 1) / 2, sc: persp, c: pt.c };
+          const persp = 1.9 / (1.9 - Math.max(-1.6, Math.min(1.6, z2)));
+          return {
+            sx: cx + x * R * persp,
+            sy: cy + y2 * R * persp,
+            depth: (z2 + 1.6) / 3.2,
+            sc: persp,
+            c: AGENTS[i % AGENTS.length],
+          };
         });
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.9);
-        g.addColorStop(0, `rgba(255,106,26,${0.42 * op})`);
+
+        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+        g.addColorStop(0, `rgba(255,106,26,${0.4 * op})`);
         g.addColorStop(1, "rgba(255,106,26,0)");
         ctx.fillStyle = g;
         ctx.beginPath();
-        ctx.arc(cx, cy, R * 0.9, 0, 7);
+        ctx.arc(cx, cy, R, 0, 7);
         ctx.fill();
+
         LINKS.forEach(([i, j]) => {
-          const a = proj[i],
-            b = proj[j];
-          ctx.strokeStyle = `rgba(113,54,0,${0.1 * op * (a.depth + b.depth)})`;
+          const a = proj[i], b = proj[j];
+          ctx.strokeStyle = `rgba(113,54,0,${0.11 * op * (a.depth + b.depth)})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(a.sx, a.sy);
           ctx.lineTo(b.sx, b.sy);
           ctx.stroke();
         });
+
         proj
           .slice()
           .sort((a, b) => a.depth - b.depth)
           .forEach((nd) => {
             const rad = 2.2 + nd.sc * 2.6;
-            ctx.globalAlpha = (0.35 + nd.depth * 0.65) * op;
+            ctx.globalAlpha = Math.max(0.15, Math.min(1, (0.35 + nd.depth * 0.65) * op));
             ctx.shadowColor = nd.c;
             ctx.shadowBlur = 14 * nd.depth;
             ctx.fillStyle = nd.c;
@@ -135,14 +188,17 @@ export default function Landing() {
         ctx.shadowBlur = 0;
         ctx.fillStyle = `rgba(255,253,246,${op})`;
         ctx.beginPath();
-        ctx.arc(cx, cy, 3.2 + (1 - e) * 2, 0, 7);
+        ctx.arc(cx, cy, 3, 0, 7);
         ctx.fill();
         raf = requestAnimationFrame(draw);
       };
       raf = requestAnimationFrame(draw);
     }
 
-    /* ── GSAP scroll story ── */
+    /* ── GSAP scroll story — inside a context so React StrictMode's double
+       effect run can't leave duplicate tweens fighting (that's what made the
+       whole page invisible: the 2nd `from()` captured opacity 0 as the end
+       state). ctx.revert() restores pristine styles between runs. ── */
     if (!reduced) {
       const hEl = document.getElementById("heroTitle");
       if (hEl && !hEl.dataset.split) {
@@ -159,50 +215,52 @@ export default function Landing() {
           })
           .join(" ");
       }
-      gsap.from("#heroTitle .ch", {
-        yPercent: 115, opacity: 0, rotateX: -55, stagger: 0.02,
-        duration: 0.85, ease: "back.out(1.5)", delay: 0.15,
-      });
-      gsap.from(".landing .eyebrow,.landing .hero-sub,.landing .hero-cta,.landing .hero-agents", {
-        y: 24, opacity: 0, stagger: 0.1, duration: 0.75, ease: "power3.out", delay: 0.5,
-      });
-      gsap.to("#tlFill", {
-        height: "100%", ease: "none",
-        scrollTrigger: { trigger: ".landing .timeline", start: "top 60%", end: "bottom 75%", scrub: 1 },
-      });
-      gsap.to("#kin1", {
-        xPercent: -16, ease: "none",
-        scrollTrigger: { trigger: ".landing .kinetic", start: "top bottom", end: "bottom top", scrub: 1 },
-      });
-      gsap.to("#kin2", {
-        xPercent: 12, ease: "none",
-        scrollTrigger: { trigger: ".landing .kinetic", start: "top bottom", end: "bottom top", scrub: 1 },
-      });
-      const skew = gsap.quickTo(".landing .kinetic .row", "skewX", { duration: 0.4, ease: "power2.out" });
-      ScrollTrigger.create({
-        onUpdate: (s) => skew(gsap.utils.clamp(-7, 7, s.getVelocity() / -280)),
-      });
-      gsap.utils.toArray<Element>(".landing .reveal").forEach((el) =>
-        gsap.to(el, {
-          y: 0, opacity: 1, duration: 0.85, ease: "power3.out",
-          scrollTrigger: { trigger: el, start: "top 88%" },
-        }),
-      );
-      const msgs = gsap.utils.toArray<Element>("#feedMsgs .fmsg");
-      const typing = document.getElementById("feedTyping");
-      const tl = gsap.timeline({
-        repeat: -1, repeatDelay: 1.6,
-        scrollTrigger: { trigger: "#live", start: "top 72%" },
-      });
-      tl.set(typing, { opacity: 1 })
-        .to(msgs, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.4)", stagger: 0.75 })
-        .to(typing, { opacity: 0, duration: 0.3 }, "-=.3")
-        .to(msgs, { opacity: 0, y: -12, duration: 0.4, stagger: 0.06 }, "+=2.4")
-        .set(typing, { opacity: 1 });
-      cleanups.push(() => {
-        ScrollTrigger.getAll().forEach((t) => t.kill());
-        tl.kill();
-      });
+
+      const gctx = gsap.context(() => {
+        // fromTo (not from): explicit end values mean a re-run can never
+        // capture a mid-animation opacity-0 state as the destination.
+        gsap.fromTo("#heroTitle .ch",
+          { yPercent: 115, opacity: 0, rotateX: -55 },
+          { yPercent: 0, opacity: 1, rotateX: 0, stagger: 0.02,
+            duration: 0.85, ease: "back.out(1.5)", delay: 0.15 });
+        gsap.fromTo(".landing .eyebrow,.landing .hero-sub,.landing .hero-cta,.landing .hero-agents",
+          { y: 24, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.1, duration: 0.75, ease: "power3.out", delay: 0.5 });
+        gsap.to("#tlFill", {
+          height: "100%", ease: "none",
+          scrollTrigger: { trigger: ".landing .timeline", start: "top 60%", end: "bottom 75%", scrub: 1 },
+        });
+        gsap.to("#kin1", {
+          xPercent: -16, ease: "none",
+          scrollTrigger: { trigger: ".landing .kinetic", start: "top bottom", end: "bottom top", scrub: 1 },
+        });
+        gsap.to("#kin2", {
+          xPercent: 12, ease: "none",
+          scrollTrigger: { trigger: ".landing .kinetic", start: "top bottom", end: "bottom top", scrub: 1 },
+        });
+        const skew = gsap.quickTo(".landing .kinetic .row", "skewX", { duration: 0.4, ease: "power2.out" });
+        ScrollTrigger.create({
+          onUpdate: (s) => skew(gsap.utils.clamp(-7, 7, s.getVelocity() / -280)),
+        });
+        gsap.utils.toArray<Element>(".landing .reveal").forEach((el) =>
+          gsap.fromTo(el,
+            { y: 40, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.85, ease: "power3.out",
+              scrollTrigger: { trigger: el, start: "top 88%" } }),
+        );
+        const msgs = gsap.utils.toArray<Element>("#feedMsgs .fmsg");
+        const typing = document.getElementById("feedTyping");
+        const tl = gsap.timeline({
+          repeat: -1, repeatDelay: 1.6,
+          scrollTrigger: { trigger: "#live", start: "top 72%" },
+        });
+        tl.set(typing, { opacity: 1 })
+          .to(msgs, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.4)", stagger: 0.75 })
+          .to(typing, { opacity: 0, duration: 0.3 }, "-=.3")
+          .to(msgs, { opacity: 0, y: -12, duration: 0.4, stagger: 0.06 }, "+=2.4")
+          .set(typing, { opacity: 1 });
+      }, rootRef);
+      cleanups.push(() => gctx.revert());
     } else {
       document.querySelectorAll<HTMLElement>(".landing .reveal,.landing .fmsg").forEach((e) => {
         e.style.opacity = "1";
