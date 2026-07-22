@@ -34,12 +34,21 @@
   font-family: "JetBrains Mono", monospace;
 }
 
-/* mascot canvas floats above content, never blocks clicks */
-.landing #mascot {
+/* Robot-head mascot — centered watermark behind the copy (z-index 1, under the
+   .layer content at z-index 2). The component tracks the cursor via a window
+   listener, so pointer-events:none doesn't stop it. */
+.landing .robot-mascot {
   position: fixed;
-  inset: 0;
-  z-index: 40;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
   pointer-events: none;
+  opacity: 0.9;
+  will-change: transform, opacity;
+}
+.landing .robot-mascot svg {
+  display: block;
 }
 .landing .layer {
   position: relative;
