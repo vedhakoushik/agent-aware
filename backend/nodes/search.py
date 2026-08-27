@@ -94,7 +94,7 @@ def _tavily_search(query: str, api_key: str, domain: str = "") -> list[dict]:
 def _ddg_search(query: str) -> list[dict]:
     """DuckDuckGo fallback."""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS  # renamed from duckduckgo_search upstream
         time.sleep(0.8)
         with DDGS() as d:
             results = list(d.text(query, max_results=8))

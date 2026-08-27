@@ -31,6 +31,8 @@ import os
 
 logger = logging.getLogger(__name__)
 
+_gemini_key_i = 0  # round-robin cursor into GEMINI_API_KEYS, see mk_gemini() below
+
 
 def is_enabled() -> bool:
     return os.getenv("BROWSER_USE_ENABLED", "true").lower() == "true"
@@ -272,10 +274,18 @@ def _pick_browser_llm():
                           temperature=0.0)
 
     def mk_gemini():
-        # VISION-capable but tiny free quota (~20/day) — burns out fast under browser-use's
-        # one-call-per-step. Use only when you have Gemini headroom (BROWSER_USE_PROVIDER=gemini).
+        # VISION-capable but tiny free quota (~20/day PER KEY) — burns out fast under
+        # browser-use's one-call-per-step. Rotate across GEMINI_API_KEYS (same pool
+        # backend/llm.py uses) so one platform's agent doesn't exhaust the quota that
+        # the next platform's agent needs. Picks the next key each time an agent is
+        # built (i.e. once per platform), round-robin.
+        from backend.llm import _key_pool
+        global _gemini_key_i
+        keys = _key_pool("GEMINI_API_KEY") or ([gem_key] if gem_key else [])
+        key = keys[_gemini_key_i % len(keys)]
+        _gemini_key_i += 1
         return ChatGoogle(model=os.getenv("BROWSER_USE_GEMINI_MODEL", "gemini-2.0-flash"),
-                          api_key=gem_key)
+                          api_key=key)
 
     def mk_ollama():
         return ChatOllama(model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),

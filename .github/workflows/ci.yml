@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Offline tests (redaction, memory/RAG, self-correction — no API keys needed)
+        run: >
+          pytest tests/test_redaction.py tests/test_memory_redaction.py
+          tests/test_self_correction.py -v
+
+      - name: Live prompt-injection defense test (real Gemini call)
+        if: ${{ secrets.GEMINI_API_KEY != '' || secrets.GEMINI_API_KEYS != '' }}
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          ROUTE_RECOMMEND: gemini
+          ROUTE_VALIDATE: gemini
+        run: pytest tests/test_prompt_injection_live.py -v -s
+
+  eval-harness:
+    runs-on: ubuntu-latest
+    needs: test
+    if: ${{ secrets.GEMINI_API_KEY != '' || secrets.GEMINI_API_KEYS != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run search-pipeline eval (single query, Gemini-only)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+          ROUTE_INTENT: gemini
+          ROUTE_SEARCH_PARSE: gemini
+          ROUTE_UNIVERSAL: gemini
+          ROUTE_MONITOR: gemini
+          ROUTE_INSIGHTS: gemini
+          ROUTE_RECOMMEND: gemini
+          ROUTE_VALIDATE: gemini
+          ROUTE_SEGREGATE: gemini
+          ROUTE_CHAT: gemini
+          BROWSER_USE_ENABLED: "false"
+        run: python evals/run_evals.py "iPhone 15 128GB price"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eval-snapshot
+          path: data/evals/

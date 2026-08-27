@@ -1,0 +1,230 @@
+{
+  "timestamp": "20260827_224008",
+  "runs": [
+    {
+      "label": "adhoc",
+      "query": "best pizza in Bangalore",
+      "total_seconds": 375.5,
+      "slowest_node": {
+        "name": "search_platforms",
+        "seconds": 318.52
+      },
+      "slowest_platform": {
+        "platform_id": "zomato",
+        "platform_name": "Zomato",
+        "tier": "universal",
+        "tiers_tried": [
+          {
+            "tier": "cache",
+            "seconds": 4.79,
+            "n": 0
+          },
+          {
+            "tier": "tavily",
+            "seconds": 3.59,
+            "n": 8
+          },
+          {
+            "tier": "selenium",
+            "seconds": 15.57,
+            "n": 2
+          },
+          {
+            "tier": "browser-use",
+            "seconds": 180.03,
+            "n": 1
+          },
+          {
+            "tier": "universal",
+            "seconds": 42.76,
+            "n": 21
+          }
+        ],
+        "n_results": 1,
+        "elapsed": 317.32,
+        "error": null,
+        "roadblock": null
+      },
+      "platforms_searched": 4,
+      "platforms_with_results": 3,
+      "total_results": 8,
+      "nodes": [
+        {
+          "name": "parse_intent",
+          "seconds": 11.38
+        },
+        {
+          "name": "search_platforms",
+          "seconds": 318.52
+        },
+        {
+          "name": "aggregate",
+          "seconds": 6.23
+        },
+        {
+          "name": "compare",
+          "seconds": 0.0
+        },
+        {
+          "name": "segregate",
+          "seconds": 9.59
+        },
+        {
+          "name": "insights",
+          "seconds": 7.98
+        },
+        {
+          "name": "recommend",
+          "seconds": 21.78
+        },
+        {
+          "name": "validate",
+          "seconds": 0.0
+        }
+      ],
+      "platforms": [
+        {
+          "platform_id": "google_maps_restaurants",
+          "platform_name": "Google Maps",
+          "tier": "cache",
+          "tiers_tried": [
+            {
+              "tier": "cache",
+              "seconds": 43.18,
+              "n": 4
+            }
+          ],
+          "n_results": 4,
+          "elapsed": 43.19,
+          "error": null,
+          "roadblock": null
+        },
+        {
+          "platform_id": "swiggy",
+          "platform_name": "Swiggy",
+          "tier": "tavily",
+          "tiers_tried": [
+            {
+              "tier": "cache",
+              "seconds": 4.79,
+              "n": 0
+            },
+            {
+              "tier": "tavily",
+              "seconds": 3.2,
+              "n": 8
+            }
+          ],
+          "n_results": 3,
+          "elapsed": 21.94,
+          "error": null,
+          "roadblock": null
+        },
+        {
+          "platform_id": "dineout",
+          "platform_name": "Dineout",
+          "tier": "",
+          "tiers_tried": [
+            {
+              "tier": "cache",
+              "seconds": 0.03,
+              "n": 0
+            },
+            {
+              "tier": "tavily",
+              "seconds": 2.75,
+              "n": 8
+            },
+            {
+              "tier": "selenium",
+              "seconds": 13.93,
+              "n": 2
+            },
+            {
+              "tier": "browser-use",
+              "seconds": 124.65,
+              "n": 0
+            },
+            {
+              "tier": "universal",
+              "seconds": 3.05,
+              "n": 0
+            },
+            {
+              "tier": "google",
+              "seconds": 6.43,
+              "n": 1
+            },
+            {
+              "tier": "ddg",
+              "seconds": 1.37,
+              "n": 0
+            }
+          ],
+          "n_results": 0,
+          "elapsed": 167.66,
+          "error": null,
+          "roadblock": {
+            "reason": "The browser couldn't reach a results list.",
+            "suggestion": "Suggested fix: click the Search button, then read the first results",
+            "error": "The browser reached the page but couldn't read a results list (no listings detected).",
+            "analysis": {
+              "category": "unknown",
+              "root_cause": "Unrecognized failure.",
+              "diagnosis": "The browser couldn't reach a results list.",
+              "fixable": true,
+              "suggested_hint": "click the Search button, then read the first results",
+              "confidence": "low",
+              "by": "heuristic"
+            },
+            "tiers_tried": [
+              "cache",
+              "tavily",
+              "selenium",
+              "browser-use",
+              "universal",
+              "google",
+              "ddg"
+            ]
+          }
+        },
+        {
+          "platform_id": "zomato",
+          "platform_name": "Zomato",
+          "tier": "universal",
+          "tiers_tried": [
+            {
+              "tier": "cache",
+              "seconds": 4.79,
+              "n": 0
+            },
+            {
+              "tier": "tavily",
+              "seconds": 3.59,
+              "n": 8
+            },
+            {
+              "tier": "selenium",
+              "seconds": 15.57,
+              "n": 2
+            },
+            {
+              "tier": "browser-use",
+              "seconds": 180.03,
+              "n": 1
+            },
+            {
+              "tier": "universal",
+              "seconds": 42.76,
+              "n": 21
+            }
+          ],
+          "n_results": 1,
+          "elapsed": 317.32,
+          "error": null,
+          "roadblock": null
+        }
+      ]
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import os
 from backend.llm import chat
 from backend.state import AgentState, Recommendation
 from backend.memory.store import get_price_context
+from backend.security.redact import wrap_untrusted
 from backend.progress import emit
 
 logger = logging.getLogger(__name__)
@@ -67,7 +68,8 @@ def recommend_node(state: AgentState) -> dict:
                         query=query,
                         intent_type=intent.get("type", ""),
                         params=json.dumps(intent.get("params", {})),
-                        comparison=json.dumps(top3, indent=2),
+                        comparison=wrap_untrusted(json.dumps(top3, indent=2),
+                                                  source="scraped platform results"),
                         price_context=price_context or "No historical data yet.",
                     ),
                 },

@@ -19,10 +19,15 @@ What to look at:
 """
 from __future__ import annotations
 
+import io
 import json
 import os
 import sys
 from datetime import datetime
+
+# Windows consoles default to cp1252, which can't encode the ▶/═ etc. used below.
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # Make the project importable when run as a script.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

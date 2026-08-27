@@ -1,0 +1,25 @@
+{
+  "timestamp": "20260827_222628",
+  "runs": [
+    {
+      "label": "adhoc",
+      "query": "hotels in Manali under 3000",
+      "total_seconds": 5.25,
+      "slowest_node": {
+        "name": "parse_intent",
+        "seconds": 1.91
+      },
+      "slowest_platform": null,
+      "platforms_searched": 0,
+      "platforms_with_results": 0,
+      "total_results": 0,
+      "nodes": [
+        {
+          "name": "parse_intent",
+          "seconds": 1.91
+        }
+      ],
+      "platforms": []
+    }
+  ]
+}

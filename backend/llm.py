@@ -56,7 +56,7 @@ PROVIDERS = {
 DEFAULT_MODEL = {
     "ollama":     os.getenv("OLLAMA_MODEL", "qwen2.5:7b"),
     "groq":       "llama-3.3-70b-versatile",
-    "gemini":     "gemini-2.5-flash",
+    "gemini":     "gemini-3.6-flash",
     "cerebras":   "gpt-oss-120b",
     "openrouter": "deepseek/deepseek-r1:free",
 }
@@ -119,6 +119,18 @@ def langfuse_enabled() -> bool:
     return bool(os.getenv("LANGFUSE_PUBLIC_KEY") and os.getenv("LANGFUSE_SECRET_KEY"))
 
 
+def _key_pool(key_env: str) -> list[str]:
+    """Keys available for this provider: the pool env (`{KEY_ENV}S`, comma-separated)
+    merged with the singular key, deduped, order preserved. Lets a provider rotate
+    across multiple free-tier keys instead of hammering one until it's rate-limited."""
+    singular = os.getenv(key_env, "").strip()
+    pool_raw = os.getenv(f"{key_env}S", "")
+    keys = [k.strip() for k in pool_raw.split(",") if k.strip()]
+    if singular and singular not in keys:
+        keys.append(singular)
+    return keys
+
+
 def provider_available(provider: str) -> bool:
     spec = PROVIDERS.get(provider)
     if not spec:
@@ -126,25 +138,33 @@ def provider_available(provider: str) -> bool:
     # Ollama is local + keyless — it's "available" when explicitly enabled in .env.
     if provider == "ollama":
         return os.getenv("OLLAMA_ENABLED", "").lower() in ("1", "true", "yes")
-    return bool(os.getenv(spec[1]))
+    return bool(_key_pool(spec[1]))
 
 
 # ── Client factory ────────────────────────────────────────────
 
-def get_client(provider: str = "groq"):
+def get_client(provider: str = "groq", key_index: int = 0):
     """Return a cached OpenAI-compatible client for a provider (Langfuse-traced when
-    keys are set), or None if that provider has no API key configured."""
+    keys are set), or None if that provider has no API key configured.
+
+    `key_index` selects which key in that provider's pool to use (see `_key_pool`) —
+    lets `chat()` rotate to the next key on a per-key rate limit instead of failing
+    over to a weaker provider."""
     global _langfuse_logged
     spec = PROVIDERS.get(provider)
     if not spec:
         return None
     base_url, key_env = spec
-    # Ollama needs no real key, but the OpenAI client requires a non-empty string.
-    api_key = "ollama" if provider == "ollama" else os.getenv(key_env, "")
-    if not api_key:
-        return None
+    if provider == "ollama":
+        # Ollama needs no real key, but the OpenAI client requires a non-empty string.
+        api_key = "ollama"
+    else:
+        keys = _key_pool(key_env)
+        if not keys:
+            return None
+        api_key = keys[key_index % len(keys)]
 
-    cache_key = f"{provider}:{'lf' if langfuse_enabled() else 'plain'}"
+    cache_key = f"{provider}:{key_index}:{'lf' if langfuse_enabled() else 'plain'}"
     if cache_key in _client_cache:
         return _client_cache[cache_key]
 
@@ -164,6 +184,13 @@ def get_client(provider: str = "groq"):
 
     _client_cache[cache_key] = client
     return client
+
+
+def _key_count(provider: str) -> int:
+    spec = PROVIDERS.get(provider)
+    if not spec or provider == "ollama":
+        return 1
+    return max(1, len(_key_pool(spec[1])))
 
 
 def get_chat_client():
@@ -228,6 +255,9 @@ def _is_retryable(err: Exception) -> bool:
         # context-length overflow → fail over to a larger-context provider
         "context length", "context_length", "maximum context", "too long",
         "reduce the length", "exceeds the maximum", "context window",
+        # dead/invalid key in a rotation pool → skip to the next key
+        "401", "403", "api key not valid", "invalid api key", "unauthorized",
+        "permission_denied", "payment_required", "402",
     ))
 
 
@@ -258,31 +288,38 @@ def chat(task: str, *, messages: list, **kwargs):
 
     last_err = None
     for i, (provider, model) in enumerate(chain):
-        client = get_client(provider)
-        if client is None:
-            continue
-        try:
-            resp = client.chat.completions.create(model=model, messages=messages, **kwargs)
+        n_keys = _key_count(provider)
+        for key_i in range(n_keys):
+            client = get_client(provider, key_index=key_i)
+            if client is None:
+                break
             try:
-                _bus_send(frm=f"LLM · {provider}", to=agent, kind="response",
-                          title=f"LLM ({model}) replies to {agent}",
-                          content=resp.choices[0].message.content,
-                          meta={"task": task, "provider": provider, "model": model})
-            except Exception:
-                pass
-            return resp
-        except Exception as e:
-            last_err = e
-            more = i < len(chain) - 1
-            if more and _is_retryable(e):
-                logger.warning(f"[{task}] {provider}:{model} failed ({str(e)[:80]}); "
-                               f"failing over to {chain[i+1][0]}")
-                _bus_send(frm=f"LLM · {provider}", to=agent, kind="error",
-                          title=f"{provider} rate-limited — failing over to {chain[i+1][0]}",
-                          content=str(e)[:300],
-                          meta={"task": task, "provider": provider})
-                continue
-            raise
+                resp = client.chat.completions.create(model=model, messages=messages, **kwargs)
+                try:
+                    _bus_send(frm=f"LLM · {provider}", to=agent, kind="response",
+                              title=f"LLM ({model}) replies to {agent}",
+                              content=resp.choices[0].message.content,
+                              meta={"task": task, "provider": provider, "model": model})
+                except Exception:
+                    pass
+                return resp
+            except Exception as e:
+                last_err = e
+                more_keys = key_i < n_keys - 1
+                more_providers = i < len(chain) - 1
+                if more_keys and _is_retryable(e):
+                    logger.warning(f"[{task}] {provider}:{model} key #{key_i} failed "
+                                    f"({str(e)[:80]}); rotating to key #{key_i+1}")
+                    continue
+                if more_providers and _is_retryable(e):
+                    logger.warning(f"[{task}] {provider}:{model} failed ({str(e)[:80]}); "
+                                   f"failing over to {chain[i+1][0]}")
+                    _bus_send(frm=f"LLM · {provider}", to=agent, kind="error",
+                              title=f"{provider} rate-limited — failing over to {chain[i+1][0]}",
+                              content=str(e)[:300],
+                              meta={"task": task, "provider": provider})
+                    break
+                raise
     raise last_err or RuntimeError(f"All providers failed for task '{task}'")
 
 

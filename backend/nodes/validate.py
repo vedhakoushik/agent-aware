@@ -36,6 +36,7 @@ from backend.llm import chat
 from backend.state import AgentState
 from backend.progress import emit
 from backend.agent_bus import send as bus_send
+from backend.security.redact import detect_injection
 
 logger = logging.getLogger(__name__)
 
@@ -300,6 +301,27 @@ def validate_node(state: AgentState) -> dict:
                    "detail": ("Recommendation has winner, reasoning and confidence" if complete
                               else "Recommendation is missing required fields"),
                    "proof": None})
+
+    # ── CHECK: output safety — did an injection payload leak into user-facing text?
+    # `comparison` and `price_context` in the recommend prompt are untrusted (scraped
+    # web content / persisted memory) and get fenced by wrap_untrusted(), but that's
+    # defense-in-depth, not a guarantee the LLM ignored an embedded instruction. This
+    # is the backstop: if the model's own reasoning/tips text now CONTAINS injection
+    # phrasing, something upstream got through — treat as critical and force a
+    # regenerate rather than show the user text that might be attacker-steered.
+    user_facing = " ".join(str(rec.get(f, "")) for f in ("reasoning", "price_analysis", "tips"))
+    injected = detect_injection(user_facing)
+    safe = not injected
+    checks.append({"name": "output_safety", "passed": safe, "severity": "critical",
+                   "detail": ("No injection patterns in the recommendation text" if safe
+                              else f"Suspicious phrasing in output: {injected[:3]}"),
+                   "proof": {"matched_patterns": injected} if injected else None})
+    if not safe and round_n < _max_rounds():
+        plan.append({"action": "regenerate_recommendation", "target": None,
+                     "reason": f"output_safety: {injected[:2]}"})
+        bus_send(frm="Validation Agent", to="You", kind="error",
+                 title="Recommendation text flagged — possible prompt injection",
+                 content={"matched_patterns": injected})
 
     # ── Layer B: LLM relevance/coherence (best-effort) ────────────────────────
     # Skip when we just deterministically corrected the winner — the reasoning we
