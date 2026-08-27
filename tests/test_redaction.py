@@ -41,8 +41,12 @@ def test_redacts_api_key():
 
 
 def test_redacts_google_style_key():
-    out, found = redact_pii("key=AIzaSyBBa8RNYEgHAsW0_f1lV-GqxdrwHxtIw_w")
-    assert "AIzaSyBBa8RNYEgHAsW0_f1lV-GqxdrwHxtIw_w" not in out
+    # Fabricated, correctly-shaped key — never a real credential. A prior version of
+    # this test used a real live GEMINI_API_KEY as fixture data, which got committed
+    # and flagged by GitHub secret scanning. Never hardcode a real key anywhere, even
+    # as "just test input" — use an obviously fake one that only matches the shape.
+    out, found = redact_pii("key=AIzaSyFAKE0000000000000000000000000")
+    assert "AIzaSyFAKE0000000000000000000000000" not in out
     assert "API_KEY" in found
 
 
