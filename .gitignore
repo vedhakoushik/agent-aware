@@ -12,6 +12,7 @@ data/chroma/
 
 # ── Python ──
 __pycache__/
+.pytest_cache/
 *.py[cod]
 *.egg-info/
 .venv/
