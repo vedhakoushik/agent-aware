@@ -1,0 +1,233 @@
+# City -> primary IATA airport code.
+#
+# Used by the fast flight tier (backend/nodes/search.py) to turn a spoken city
+# name into the `departure_id` / `arrival_id` the Google Flights API expects.
+#
+# Two rules govern this file:
+#
+# 1. NEVER GUESS. A city that is not listed here resolves to None, and the fast
+#    fare lookup is skipped with a visible message, rather than being sent a
+#    fabricated code. The old behaviour took the first three letters of the city
+#    name ("Bhubaneswar" -> "BHU", which is Bhatinda) and returned confident
+#    fares for the wrong airport. A missing entry is a gap; a wrong entry is a
+#    lie. Add cities here rather than reintroducing a fallback.
+#
+# 2. ONE PRIMARY AIRPORT PER CITY. Multi-airport metros (London, Paris, Tokyo,
+#    New York, Moscow, Milan, Bangkok, Shanghai...) are mapped to the single
+#    busiest international gateway, NOT to the metro code (LON/PAR/TYO/NYC).
+#    Metro codes are not accepted by every Google Flights query, and silently
+#    returning one changes what the user is shown. If you need the secondary
+#    airport, add it under its own name (e.g. `gatwick: LGW`).
+#
+# Keys are matched lowercase and whitespace-stripped. Aliases (bombay/mumbai,
+# calicut/kozhikode) are listed as separate keys pointing at the same code.
+#
+# The values here also form the set of codes accepted when a user types an
+# airport code directly ("BLR") instead of a city name — so an unknown
+# three-letter string still fails loudly instead of being passed through.
+
+airports:
+  # ── India — metros ────────────────────────────────────────────────
+  mumbai: BOM
+  bombay: BOM
+  delhi: DEL
+  new delhi: DEL
+  bangalore: BLR
+  bengaluru: BLR
+  hyderabad: HYD
+  chennai: MAA
+  madras: MAA
+  kolkata: CCU
+  calcutta: CCU
+  pune: PNQ
+  ahmedabad: AMD
+
+  # ── India — other cities ──────────────────────────────────────────
+  agartala: IXA
+  aizawl: AJL
+  amritsar: ATQ
+  aurangabad: IXU
+  bagdogra: IXB
+  belgaum: IXG
+  belagavi: IXG
+  bhopal: BHO
+  bhubaneswar: BBI
+  chandigarh: IXC
+  coimbatore: CJB
+  dehradun: DED
+  dibrugarh: DIB
+  dimapur: DMU
+  gaya: GAY
+  goa: GOI
+  gorakhpur: GOP
+  guwahati: GAU
+  hubli: HBX
+  hubballi: HBX
+  imphal: IMF
+  indore: IDR
+  jabalpur: JLR
+  jaipur: JAI
+  jammu: IXJ
+  jodhpur: JDH
+  jorhat: JRH
+  kannur: CNN
+  kochi: COK
+  cochin: COK
+  kozhikode: CCJ
+  calicut: CCJ
+  leh: IXL
+  lucknow: LKO
+  madurai: IXM
+  mangalore: IXE
+  mangaluru: IXE
+  nagpur: NAG
+  nashik: ISK
+  patna: PAT
+  puducherry: PNY
+  pondicherry: PNY
+  port blair: IXZ
+  prayagraj: IXD
+  allahabad: IXD
+  raipur: RPR
+  rajkot: RAJ
+  ranchi: IXR
+  shillong: SHL
+  silchar: IXS
+  srinagar: SXR
+  surat: STV
+  thiruvananthapuram: TRV
+  trivandrum: TRV
+  tiruchirappalli: TRZ
+  trichy: TRZ
+  tirupati: TIR
+  udaipur: UDR
+  vadodara: BDQ
+  varanasi: VNS
+  vijayawada: VGA
+  visakhapatnam: VTZ
+  vizag: VTZ
+
+  # ── South Asia ────────────────────────────────────────────────────
+  colombo: CMB
+  male: MLE
+  kathmandu: KTM
+  dhaka: DAC
+  karachi: KHI
+  lahore: LHE
+  islamabad: ISB
+
+  # ── Middle East ───────────────────────────────────────────────────
+  dubai: DXB
+  abu dhabi: AUH
+  sharjah: SHJ
+  doha: DOH
+  muscat: MCT
+  kuwait: KWI
+  kuwait city: KWI
+  riyadh: RUH
+  jeddah: JED
+  dammam: DMM
+  manama: BAH
+  bahrain: BAH
+  tel aviv: TLV
+
+  # ── Asia-Pacific ──────────────────────────────────────────────────
+  singapore: SIN
+  kuala lumpur: KUL
+  bangkok: BKK          # Suvarnabhumi; Don Mueang is DMK
+  phuket: HKT
+  jakarta: CGK
+  bali: DPS
+  denpasar: DPS
+  manila: MNL
+  ho chi minh city: SGN
+  saigon: SGN
+  hanoi: HAN
+  hong kong: HKG
+  taipei: TPE
+  seoul: ICN
+  tokyo: HND            # Haneda; Narita is NRT
+  osaka: KIX
+  beijing: PEK
+  shanghai: PVG         # Pudong; Hongqiao is SHA
+  guangzhou: CAN
+  sydney: SYD
+  melbourne: MEL
+  brisbane: BNE
+  perth: PER
+  auckland: AKL
+
+  # ── Central Asia / Caucasus ───────────────────────────────────────
+  baku: GYD
+  tbilisi: TBS
+  almaty: ALA
+  tashkent: TAS
+
+  # ── Europe ────────────────────────────────────────────────────────
+  london: LHR           # Heathrow; Gatwick LGW, Stansted STN, Luton LTN
+  gatwick: LGW
+  manchester: MAN
+  birmingham: BHX
+  edinburgh: EDI
+  dublin: DUB
+  paris: CDG            # Charles de Gaulle; Orly is ORY
+  amsterdam: AMS
+  frankfurt: FRA
+  munich: MUC
+  berlin: BER
+  zurich: ZRH
+  geneva: GVA
+  vienna: VIE
+  rome: FCO             # Fiumicino; Ciampino is CIA
+  milan: MXP            # Malpensa; Linate is LIN
+  venice: VCE
+  barcelona: BCN
+  madrid: MAD
+  lisbon: LIS
+  brussels: BRU
+  copenhagen: CPH
+  stockholm: ARN
+  oslo: OSL
+  helsinki: HEL
+  warsaw: WAW
+  prague: PRG
+  budapest: BUD
+  athens: ATH
+  istanbul: IST
+  moscow: SVO           # Sheremetyevo; Domodedovo DME, Vnukovo VKO
+
+  # ── Africa ────────────────────────────────────────────────────────
+  cairo: CAI
+  johannesburg: JNB
+  cape town: CPT
+  nairobi: NBO
+  addis ababa: ADD
+  lagos: LOS
+
+  # ── North America ─────────────────────────────────────────────────
+  new york: JFK         # Kennedy; Newark EWR, LaGuardia LGA
+  newark: EWR
+  boston: BOS
+  washington: IAD       # Dulles; Reagan National is DCA
+  chicago: ORD
+  atlanta: ATL
+  miami: MIA
+  dallas: DFW
+  houston: IAH
+  denver: DEN
+  seattle: SEA
+  san francisco: SFO
+  los angeles: LAX
+  las vegas: LAS
+  toronto: YYZ
+  vancouver: YVR
+  montreal: YUL
+  mexico city: MEX
+
+  # ── South America ─────────────────────────────────────────────────
+  sao paulo: GRU
+  rio de janeiro: GIG
+  buenos aires: EZE
+  santiago: SCL
+  lima: LIM
+  bogota: BOG
