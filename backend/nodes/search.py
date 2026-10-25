@@ -995,7 +995,13 @@ def _search_one_platform_sync(platform_id: str, params: dict,
 # ── LangGraph node ────────────────────────────────────────────
 
 # ── Fast flight tier — Google Flights data API (no browser, no Groq) ──────────
-_IATA = {
+# The city -> IATA table lives in config/airports.yaml so cities can be added
+# without touching code. Loaded once and cached for the process.
+_AIRPORTS_CACHE: Optional[dict] = None
+
+# Minimal last-resort table, used only if config/airports.yaml is missing or
+# unreadable. Deliberately small — the real data belongs in the YAML.
+_IATA_BUILTIN = {
     "mumbai": "BOM", "bombay": "BOM", "delhi": "DEL", "new delhi": "DEL",
     "bangalore": "BLR", "bengaluru": "BLR", "hyderabad": "HYD", "chennai": "MAA",
     "kolkata": "CCU", "goa": "GOI", "pune": "PNQ", "ahmedabad": "AMD",
@@ -1004,28 +1010,87 @@ _IATA = {
 }
 
 
-def _iata(city: str) -> str | None:
-    """Resolve a city name to its IATA airport code.
+def _airport_table() -> dict:
+    """city (lowercase) -> primary IATA code, loaded from config/airports.yaml."""
+    global _AIRPORTS_CACHE
+    if _AIRPORTS_CACHE is None:
+        path = os.path.join(os.path.dirname(__file__), "../../config/airports.yaml")
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            table = {
+                str(k).strip().lower(): str(v).strip().upper()
+                for k, v in (data.get("airports") or {}).items()
+                if k and v
+            }
+            if not table:
+                raise ValueError("airports.yaml contained no entries")
+        except Exception as e:
+            logger.warning(
+                f"Could not load config/airports.yaml ({e}) — falling back to the "
+                f"built-in {len(_IATA_BUILTIN)}-city table. Flight coverage will be limited."
+            )
+            table = dict(_IATA_BUILTIN)
+        _AIRPORTS_CACHE = table
+    return _AIRPORTS_CACHE
 
-    Returns None when the city is not in the known table so the caller can
-    handle the missing value explicitly instead of silently generating a bogus
-    code (e.g. "Bhubaneswar" -> "BHU", which is not a real IATA airport).
-    See: https://github.com/vedhakoushik/agent-aware/issues/6
+
+def _iata(city: str) -> Optional[str]:
+    """Resolve a city name (or an airport code the user typed directly) to an IATA code.
+
+    Returns None when the city is unknown. It deliberately does NOT fall back to
+    "first three letters uppercased": that guess is wrong far more often than it is
+    right and it fails SILENTLY — "Bhubaneswar" became "BHU", which is Bhatinda, so
+    the user got confidently-presented fares for a city they never asked about.
+    Callers must handle None by skipping the fast tier and saying so, not by sending
+    a fabricated code to the API. See config/airports.yaml.
+
+    https://github.com/vedhakoushik/agent-aware/issues/6
     """
-    return _IATA.get((city or "").strip().lower())
+    raw = (city or "").strip()
+    if not raw:
+        return None
+
+    table = _airport_table()
+    hit = table.get(raw.lower())
+    if hit:
+        return hit
+
+    # The user may have typed an airport code instead of a city ("BLR"). Accept it
+    # only if it is a code we actually know — otherwise an unknown three-letter
+    # string would sail through as if it were real, which is the original bug.
+    if len(raw) == 3 and raw.isalpha():
+        code = raw.upper()
+        if code in set(table.values()):
+            return code
+
+    return None
 
 
-def _flight_base_params(params: dict) -> dict:
+def unresolved_flight_cities(params: dict) -> list[str]:
+    """The origin/destination values that could not be mapped to an airport code.
+
+    Empty list means the fast flight tier is safe to run.
+    """
+    out = []
+    for field in ("origin", "destination"):
+        raw = str(params.get(field) or "").strip()
+        if raw and _iata(raw) is None:
+            out.append(raw)
+    return out
+
+
+def _flight_base_params(params: dict) -> Optional[dict]:
     """The SerpApi google_flights query shared by the fares call and the per-website
-    booking-options calls (so they describe the exact same search)."""
+    booking-options calls (so they describe the exact same search).
+
+    Returns None when either endpoint can't be resolved to a real airport code —
+    querying with a guessed or empty code returns fares for the wrong place.
+    """
     origin = _iata(params.get("origin", ""))
     dest = _iata(params.get("destination", ""))
-    if origin is None or dest is None:
-        # City not in the IATA table — return a sentinel so the caller can
-        # report a clear error instead of sending a bogus code to SerpApi.
-        return {"engine": "google_flights", "departure_id": "ERR",
-                "arrival_id": "ERR", "outbound_date": "", "type": 2,
-                "currency": "INR", "gl": "in", "hl": "en"}
+    if not origin or not dest:
+        return None
     date = str(params.get("date") or params.get("depart_date") or "").strip()
     if not date:
         from datetime import date as _d, timedelta
@@ -1046,6 +1111,12 @@ def _serpapi_flights(params: dict, keep_token: bool = False) -> list[dict]:
     if not key:
         return []
     base = _flight_base_params(params)
+    if base is None:
+        logger.warning(
+            "Fast flight tier skipped: could not resolve %r / %r to airport codes",
+            params.get("origin"), params.get("destination"),
+        )
+        return []
     origin, dest, date = base["departure_id"], base["arrival_id"], base["outbound_date"]
     try:
         import requests
@@ -1101,10 +1172,15 @@ def _serpapi_booking_options(params: dict, token: str) -> list[dict]:
     key = os.getenv("SERPAPI_KEY", "").strip()
     if not key or not token:
         return []
+    base = _flight_base_params(params)
+    if base is None:
+        # Unreachable in practice — we only get a booking_token after the fares call
+        # already resolved both endpoints — but never build a query from a None base.
+        return []
     try:
         import requests
         r = requests.get("https://serpapi.com/search.json", params={
-            **_flight_base_params(params), "booking_token": token, "api_key": key,
+            **base, "booking_token": token, "api_key": key,
         }, timeout=25)
         r.raise_for_status()
         return r.json().get("booking_options") or []
@@ -1202,7 +1278,28 @@ def search_platforms_node(state: AgentState) -> dict:
 
     # ── FAST FLIGHT PATH ── For flights, skip the slow per-OTA browser automation
     # entirely and pull real fares from the Google Flights data API in one fast call.
-    if intent_type == "flight" and os.getenv("SERPAPI_KEY", "").strip():
+    #
+    # The API needs IATA airport codes. If a city isn't in config/airports.yaml we
+    # say so and fall through to the normal cascade — we do NOT invent a code, and
+    # we do NOT drop the failure into a log line the user will never see.
+    _use_fast_flights = intent_type == "flight" and bool(os.getenv("SERPAPI_KEY", "").strip())
+    if _use_fast_flights:
+        _unresolved = unresolved_flight_cities(params)
+        if _unresolved:
+            _names = " and ".join(f"'{c}'" for c in _unresolved)
+            _msg = (f"Couldn't match {_names} to an airport code — skipping the live "
+                    f"fares API and searching booking sites directly instead.")
+            logger.warning(_msg)
+            emit(_msg, stage="search", kind="warn")
+            bus_send(frm="Flights API Agent", to="Search Coordinator", kind="roadblock",
+                     title="Unrecognised city — live fare lookup skipped",
+                     content={"unresolved": _unresolved,
+                              "why": "no IATA airport code for this city in config/airports.yaml",
+                              "fix": "add the city to config/airports.yaml",
+                              "fallback": "searching booking sites directly instead"})
+            _use_fast_flights = False
+
+    if _use_fast_flights:
         emit("Getting live flight fares…", stage="search", kind="start")
         bus_send(frm="Search Coordinator", to="Flights API Agent", kind="dispatch",
                  title="Fetch live fares (Google Flights)",
