@@ -1004,8 +1004,15 @@ _IATA = {
 }
 
 
-def _iata(city: str) -> str:
-    return _IATA.get((city or "").strip().lower(), (city or "XXX")[:3].upper())
+def _iata(city: str) -> str | None:
+    """Resolve a city name to its IATA airport code.
+
+    Returns None when the city is not in the known table so the caller can
+    handle the missing value explicitly instead of silently generating a bogus
+    code (e.g. "Bhubaneswar" -> "BHU", which is not a real IATA airport).
+    See: https://github.com/vedhakoushik/agent-aware/issues/6
+    """
+    return _IATA.get((city or "").strip().lower())
 
 
 def _flight_base_params(params: dict) -> dict:
@@ -1013,6 +1020,12 @@ def _flight_base_params(params: dict) -> dict:
     booking-options calls (so they describe the exact same search)."""
     origin = _iata(params.get("origin", ""))
     dest = _iata(params.get("destination", ""))
+    if origin is None or dest is None:
+        # City not in the IATA table — return a sentinel so the caller can
+        # report a clear error instead of sending a bogus code to SerpApi.
+        return {"engine": "google_flights", "departure_id": "ERR",
+                "arrival_id": "ERR", "outbound_date": "", "type": 2,
+                "currency": "INR", "gl": "in", "hl": "en"}
     date = str(params.get("date") or params.get("depart_date") or "").strip()
     if not date:
         from datetime import date as _d, timedelta
